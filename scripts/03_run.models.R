@@ -2,9 +2,6 @@
 args = commandArgs(trailingOnly=TRUE)
 
 library (h2o)
-#library (caret) #do I need this?
-#library (dplyr) #do I need this?
-#library (glmnet) #do I need this?
 library (ggplot2)
 
 
@@ -19,9 +16,6 @@ h2o.removeAll()
 pos.raw<-read.csv(args[1], header=TRUE)
 neg.raw<-read.csv(args[2], header=TRUE)
 
-#pos.raw <- read.csv("/export/valenfs/projects/adam/final_results/scripts/git/TIS_prediction/prediction_scripts/pipelined/pipe_test/salmonella-mono_merged_positive.csv", header=TRUE)
-#neg.raw <- read.csv("/export/valenfs/projects/adam/final_results/scripts/git/TIS_prediction/prediction_scripts/pipelined/pipe_test/salmonella-mono_merged_negative.csv", header=TRUE)
-
 rownames(pos.raw) <- pos.raw[, 1]
 pos.raw <- pos.raw[,-1]
 pos.raw$seq_1[pos.raw$seq_1 == TRUE] <-"T"
@@ -34,7 +28,7 @@ neg.raw$seq_1[neg.raw$seq_1 == TRUE] <-"T"
 neg.raw[,13:53] <- lapply(neg.raw[,13:53] , factor)
 neg.raw[,54:ncol(pos.raw)] <- lapply(neg.raw[,54:ncol(pos.raw)] , as.numeric)
 
-#the positive set needs to be randomised
+#the sets need to be randomised
 set.seed(9999)
 pos.ran <- pos.raw[sample(nrow(pos.raw)),]
 neg.ran <- neg.raw[sample(nrow(neg.raw)),]
@@ -140,8 +134,7 @@ tree_grid_10fold <- h2o.grid(
   x = c(tidy4), 
   y = ncol(train.hex), 
   training_frame = train.hex, 
-  #nfolds=10,
-  nfolds=5,
+  nfolds=10,
   seed = 7777777,                                                             
   balance_classes = FALSE                                             
 )
@@ -160,15 +153,13 @@ rf.out = matrix(
     rf.xval@metrics$r2, 
     rf.xval@metrics$logloss, 
     rf.xval@metrics$mean_per_class_error, 
-    rf.xval@metrics$AUC, glm.xval@metrics$Gini, 
-    rf.xval@metrics$null_deviance, 
-    rf.xval@metrics$residual_deviance, 
-    rf.xval@metrics$AIC), 
-  nrow=9, 
+    rf.xval@metrics$AUC, 
+    rf.xval@metrics$Gini), 
+  nrow=6, 
   ncol=1
 )
 
-rownames(rf.out) <- c("mse", "r2", "logloss", "mpce", "auc", "gini", "nulldev", "resdev", "aic")
+rownames(rf.out) <- c("mse", "r2", "logloss", "mpce", "auc", "gini")
 colnames(rf.out) <- c("metric")
 rf.out <- format(rf.out, scientific=F)
 
@@ -207,15 +198,13 @@ test.out = matrix(
     rf.test@metrics$r2, 
     rf.test@metrics$logloss, 
     rf.test@metrics$mean_per_class_error, 
-    rf.test@metrics$AUC, glm.xval@metrics$Gini, 
-    rf.test@metrics$null_deviance, 
-    rf.test@metrics$residual_deviance, 
-    rf.test@metrics$AIC), 
-  nrow=9, 
+    rf.test@metrics$AUC, 
+    rf.test@metrics$Gini), 
+  nrow=6, 
   ncol=1
 )
 
-rownames(test.out) <- c("mse", "r2", "logloss", "mpce", "auc", "gini", "nulldev", "resdev", "aic")
+rownames(test.out) <- c("mse", "r2", "logloss", "mpce", "auc", "gini")
 colnames(test.out) <- c("metric")
 test.out <- format(test.out, scientific=F)
 
