@@ -11,6 +11,7 @@ perl
 r
 r package: h2o 
 r package: ggplot2
+r package: data.table
 
 #######################
 # Running the program #
