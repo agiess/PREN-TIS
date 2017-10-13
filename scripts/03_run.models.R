@@ -174,10 +174,7 @@ write.csv(tree.10fold.var.imp,file=args[7])
 rf.test <- h2o.performance(best.model.tree.10fold, newdata = test.hex)
 
 confusion.matrix <- h2o.confusionMatrix(rf.test)
-write.csv(as.data.frame(score.matrix), file=args[8]) 
-
 score.matrix <- rf.test@metrics$thresholds_and_metric_scores
-write.csv(as.data.frame(confusion.matrix), file=args[9]) 
 
 # area under the curve
 auc <- h2o.auc(rf.test)
@@ -209,7 +206,10 @@ colnames(test.out) <- c("metric")
 test.out <- format(test.out, scientific=F)
 
 #output metrics on testing set
+write.csv(as.data.frame(score.matrix), file=args[8])
+write.csv(as.data.frame(confusion.matrix), file=args[9])
 write.csv(test.out,file=args[10])
+
 
 #output roc plot from testing set
 ggsave(file=,args[11], out1, width=500, height=400, unit="mm", dpi=300)
