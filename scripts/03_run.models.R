@@ -187,8 +187,6 @@ roc_plot<-ggplot( data.table(fpr = fpr, tpr = tpr), aes(fpr.fpr, tpr.tpr) ) +
                   xlab("fpr") +
                   ggtitle( sprintf('AUC: %f', auc) )
 
-rt.test@metrics$
-
 #write model summary
 test.out = matrix( 
   c(rf.test@metrics$MSE, 

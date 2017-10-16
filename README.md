@@ -7,8 +7,11 @@ A generalised machine learning framework to exploit experimental ribo-seq read l
 ################
 
 samtools
+
 perl
+
 r
+
 r package: h2o 
 r package: ggplot2
 r package: data.table
