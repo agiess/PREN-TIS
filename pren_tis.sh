@@ -147,14 +147,14 @@ Rscript scripts/03_run.models.R ${out_dir}/${prefix}_positive.csv ${out_dir}/${p
 #5 Summarise the predictions
 #------------------------------------------------------------------------------------------
 
-perl scripts/04_summarise_predictions.pl $genome_gtf $genome_fa ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
+perl scripts/04_summarise_predictions.pl $genome_gtf $genome_fasta ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
 
 #------------------------------------------------------------------------------------------
 #6 Access prediction accuracy (optional)
 #------------------------------------------------------------------------------------------
 
 if [ $validation_bed ]; then
-    perl scripts/05_prediction_validation.pl $genome_gtf $genome_fa $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/${prefix}_report.txt
+    perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/${prefix}_report.txt
 fi
 
 #------------------------------------------------------------------------------------------
