@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 04/10/2017
+#to do 20/10/2017
 #script to take a bed file of orf predictions and to report n-termini suppoprt per prediction catagory
 #looking for exact matches only
 
@@ -11,11 +11,10 @@ my $nterm=$ARGV[2]; #bed of N-termini predictions
 my $bed=$ARGV[3];   #of predictions
 
 #for all matching, elongated or predicted
-#   count the number that have n-terminal support as matching, elongated or predicted
+#count the number that have n-terminal support as matching, elongated or predicted
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open gtf file setup genomic hashes, to store start and stop coords per gene, per direction
-
 my %gene_regions_fwd_start; #old way of finding starts and ends
 my %gene_regions_fwd_stop;
 my %gene_regions_rev_start;
@@ -81,7 +80,6 @@ my %n_term_rev;
 
 open (PEP, $nterm) || die "can't open $nterm";      #bed is O based at start, 1 based at end
 while (<PEP>){
-
     unless (/^track/){  #skip header
         my @b=split("\t");
         my $chr=$b[0];
@@ -117,33 +115,32 @@ while (<FA>){
 }
 close(FA);
 
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #pass hash reference to subroutine
 my ($inframe_fwd_ref, $inframe_rev_ref)=&stopToStopFromGTF( \%fasta_sequences, \%gene_info_fwd, \%gene_info_rev, \%gene_chr);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #assign N-termini here
 #get a hash of genes and how they are supported
-
 #to dereferece (makes a new copy og the hash)
 my %inframe_fwd=%{$inframe_fwd_ref};  #gene,chr,pos=1
 my %inframe_rev=%{$inframe_rev_ref};  #gene,chr,pos=1
-
 my $n_sum_ano=0;
 my $n_sum_tru=0;
 my $n_sum_elo=0;
 my $n_sum_new=0;
-
 my %n_term_assignment_fwd; #chr, start, stop = ann/tru/elo
 my %n_term_assignment_rev; #chr, stop, start = ann/tru/elo
 
+my %supported_genes;
+
 for my $c (sort keys %n_term_fwd ){
     for my $five (sort keys %{$n_term_fwd{$c}}){
-
         my $three=$n_term_fwd{$c}{$five};
-
         #check if they overlap a gene region and are in frame
         if (exists ($inframe_fwd{$c}{$five})){
             for my $gene (keys %{$inframe_fwd{$c}{$five}}){
+                $supported_genes{$gene}=1;
                 if ($five == $gene_fwd_start{$gene}){              #annotated
                     $n_term_assignment_fwd{$c}{$three}{$five}="ann";
                     $n_sum_ano++;
@@ -161,12 +158,11 @@ for my $c (sort keys %n_term_fwd ){
 
 for my $c (sort keys %n_term_rev ){
     for my $five (sort keys %{$n_term_rev{$c}}){
-
         my $three=$n_term_rev{$c}{$five};
-
         #check if they overlap a gene region and are in frame
         if (exists ($inframe_rev{$c}{$five})){
             for my $gene (keys %{$inframe_rev{$c}{$five}}){
+                $supported_genes{$gene}=1;
                 if ($five == $gene_rev_stop{$gene}){               #annotated
                     $n_term_assignment_rev{$c}{$three}{$five}="ann";
                     $n_sum_ano++;
@@ -183,9 +179,14 @@ for my $c (sort keys %n_term_rev ){
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+#count potential TIS here.
+#need a list of genes with support first
+my ($total_tis)=&countTIS( \%fasta_sequences, \%gene_info_fwd, \%gene_info_rev, \%gene_chr, \%supported_genes);
+my $count_supported=keys %supported_genes;
+
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open bed of predictions
 my %call; 
-
 my $pred_sum_ano=0;
 my $pred_sum_tru=0;
 my $pred_sum_elo=0;
@@ -215,11 +216,7 @@ while (<BED>){
 
                     if ($type eq "Annotated"){
                         if ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "ann"){
-                            if ($start == $nstart){ #check if the start matches 
-                                $call{$chr}{$stop}="ano_ano";
-                            }else{
-#                                print "non exact match ann fwd\n"; 
-                            }
+                            if ($start == $nstart){ $call{$chr}{$stop}="ano_ano"; }
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){ 
                             $call{$chr}{$stop}="ano_tru"; 
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
@@ -233,11 +230,7 @@ while (<BED>){
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){ 
                             $call{$chr}{$stop}="elo_tru"; 
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
-                            if ($start == $nstart){
-                                $call{$chr}{$stop}="elo_elo";
-                            }else{
-#                                print "non exact match elo fwd\n"; 
-                            }
+                            if ($start == $nstart){ $call{$chr}{$stop}="elo_elo"; }
                         } 
 
                     #otherwise truncation
@@ -245,11 +238,7 @@ while (<BED>){
                         if ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "ann"){ 
                             $call{$chr}{$stop}="tru_ano";
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){
-                            if ($start == $nstart){
-                                $call{$chr}{$stop}="tru_tru";
-                            }else{
-#                                print "non exact match tru fwd\n";
-                            }
+                            if ($start == $nstart){ $call{$chr}{$stop}="tru_tru"; }
                         }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
                             $call{$chr}{$stop}="tru_elo";
                         }
@@ -269,11 +258,7 @@ while (<BED>){
 
                     if ($type eq "Annotated"){
                         if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ann"){ 
-                            if ($stop == $nstop){
-                                $call{$chr}{$start}="ano_ano";
-                            }else{ 
-#                                 print "non exact match ann rev\n"; 
-                            }
+                            if ($stop == $nstop){ $call{$chr}{$start}="ano_ano"; }
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){ 
                             $call{$chr}{$start}="ano_tru";
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
@@ -282,11 +267,7 @@ while (<BED>){
 
                     }elsif ($type eq "Extension"){
                         if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
-                            if ($stop == $nstop){
-                                $call{$chr}{$start}="elo_elo";
-                            }else{ 
-#                                 print "non exact match elo rev\n";
-                            }
+                            if ($stop == $nstop){ $call{$chr}{$start}="elo_elo"; }
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){ 
                             $call{$chr}{$start}="elo_tru";
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ano"){ 
@@ -295,11 +276,7 @@ while (<BED>){
                  
                     }elsif ($type eq "Truncation"){
                         if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){
-                            if ($stop == $nstop){
-                                $call{$chr}{$start}="tru_tru";
-                            }else{ 
-#                                 print "non exact match tru rev\n";
-                            }
+                            if ($stop == $nstop){ $call{$chr}{$start}="tru_tru"; }
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ann"){ 
                             $call{$chr}{$start}="tru_ano";
                         }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
@@ -346,6 +323,33 @@ print "ann,$pred_sum_ano,$ano_ano,$ano_elo,$ano_tru\n";
 print "ext,$pred_sum_elo,$elo_ano,$elo_elo,$elo_tru\n";
 print "tru,$pred_sum_tru,$tru_ano,$tru_elo,$tru_tru\n";
 
+#summary stats
+#True +ve: Supported and predicted ORFs 
+#False +ve: Predicted ORFs that disagreed with supported positions.
+#False -ve: Supported genes where no ORF was predicted.
+#True -ve:  All potential TIS in supported stop2stop regions, that were neither predicted nor supported.
+
+print "\nthere are $count_supported, genes with n-termnial info\n";
+print "there are $total_tis, candiate TIS in all supported genes\n";
+
+my $predicted_correct=$ano_ano+$elo_elo+$tru_tru;
+my $predicted_incorrect=$ano_elo+$ano_tru+$elo_ano+$elo_tru+$tru_ano+$tru_elo;
+my $supported_not_found=$count_supported-$predicted_correct-$predicted_incorrect;
+my $correctly_rejected=$total_tis-$predicted_correct-$predicted_incorrect-$supported_not_found;
+
+my $sensitivity=$predicted_correct/($predicted_correct+$supported_not_found);
+my $specificity=$correctly_rejected/($predicted_incorrect+$correctly_rejected);
+my $precision=$predicted_correct/($predicted_correct+$predicted_incorrect);
+
+print "\ntrue positive: $predicted_correct\n";
+print "true negative: $correctly_rejected\n";
+print "false positive: $predicted_incorrect\n";
+print "false negative: $supported_not_found\n";
+
+print "\nsensitivity: $sensitivity\n";
+print "specificity: $specificity\n";
+print "positive_predicitive_value: $precision\n";
+
 exit;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -372,6 +376,7 @@ sub stopToStopFromGTF {
             my $search=1;
             my $count=0;  #set upper limit to 1000 (100)
             my $pos=$annotated_start-1;
+
             while ($search){
                 $pos=$pos-3;
 
@@ -406,7 +411,7 @@ sub stopToStopFromGTF {
             my $search=1;
             my $count=0;  #set upper limit to 1000     
             my $pos=$annotated_start-1;
-            while ($search){
+            while ($search){ #in the upstream stop codon
                 $pos=$pos+3;
 
                 #check that the substing is not bigger or smaller than the chr!
@@ -414,7 +419,7 @@ sub stopToStopFromGTF {
 
                 my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
                 $seq=~tr/ACGTacgt/TGCAtgca/;
-                #check for start codon
+                #check for stop codon
                 if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
                     $search=0;
                 }
@@ -423,7 +428,7 @@ sub stopToStopFromGTF {
                $count++;
             }
 
-            #also loop for cds and in frame positions
+            #also loop for cds and in frame positions (this is the whole stop2stop region)
             my $frameCount=0;
             #start to end
             for ($gene_info_rev{$gene}{$annotated_start} .. $pos-2) {
@@ -438,3 +443,98 @@ sub stopToStopFromGTF {
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+sub countTIS {
+
+    #regerences to gene and fasta hashes
+    my $fasta_ref=$_[0];
+    my $gene_info_fwd_ref=$_[1];
+    my $gene_info_rev_ref=$_[2];
+    my $gene_2_chr_ref=$_[3];
+    my $gene_supp_ref=$_[4];
+
+    #to dereferece (makes a new copy og the hash)
+    my %gene_info_fwd=%{$gene_info_fwd_ref};
+    my %gene_info_rev=%{$gene_info_rev_ref};
+    my %gene_2_chr=%{$gene_2_chr_ref};
+    my %supported=%{$gene_supp_ref};
+
+    my $total_potential_TIS=0;
+
+    for my $gene ( keys %gene_info_fwd ) {
+        if (exists ($supported{$gene})){  #     #restrict to those genes with N-termnial support
+            for my $annotated_start (keys %{$gene_info_fwd{$gene}}){
+
+                #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
+                my $search=1;
+                my $count=0;  #set upper limit to 1000 (100)
+                my $pos=$annotated_start-1;
+                while ($search){  #find upstream inframe stop codon
+                    $pos=$pos-3;
+                    #check that the substing is not smaller than the chr!
+                    if ($pos<0){ last; }
+                    my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$pos,3);
+                    #check for stop codon
+                    if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
+                        $search=0;
+                    }
+                    if ($count>=999){ $search=0; }
+                    $count++;
+                }
+
+                #also loop for cds and in frame positions
+                my $frameCount=0;
+                for ($pos+4 .. $gene_info_fwd{$gene}{$annotated_start}){
+                    $frameCount++;
+                    if ($frameCount%3 == 1){
+                        #count the number of inframe near canonical positions here. 
+                        #restrict to those genes with N-termnial support
+                        my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$_,3);
+                        if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){
+                            $total_potential_TIS++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for my $gene (keys %gene_info_rev){
+        if (exists ($supported{$gene})){  #     #restrict to those genes with N-termnial support 
+            for my $annotated_start (keys %{$gene_info_rev{$gene}}){
+
+                #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
+                my $search=1; 
+                my $count=0;  #set upper limit to 1000     
+                my $pos=$annotated_start-1;
+                while ($search){ #in the upstream stop codon
+                    $pos=$pos+3;
+                    #check that the substing is not bigger or smaller than the chr! 
+                    if ($pos+1>length($fasta_sequences{$gene_2_chr{$gene}})){ last; }
+                    my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
+                    $seq=~tr/ACGTacgt/TGCAtgca/;
+                    #check for stop codon
+                    if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
+                        $search=0;
+                    }
+                    if ($count>=999){ $search=0; }
+                    $count++;
+                }
+
+                #also loop for cds and in frame positions (this is the whole stop2stop region)
+                my $frameCount=0;
+                #start to end
+                for ($gene_info_rev{$gene}{$annotated_start} .. $pos-2) {
+                    $frameCount++;
+                    if ($frameCount%3 == 1){
+                        my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
+                        $seq=~tr/ACGTacgt/TGCAtgca/;
+                        if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){
+                            $total_potential_TIS++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return ($total_potential_TIS);
+}

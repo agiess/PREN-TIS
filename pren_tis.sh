@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#AG 13/10/17
+#AG 20/10/17
 #script to run TIS predictions 
 #1 Bam to Sam
 #2 Matrix of stop to stop regions
@@ -154,7 +154,12 @@ perl scripts/04_summarise_predictions.pl $genome_gtf $genome_fasta ${out_dir}/${
 #------------------------------------------------------------------------------------------
 
 if [ $validation_bed ]; then
-    perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/${prefix}_report.txt
+
+    if [ ! -d ${out_dir}/validation_metrics ]; then
+        mkdir ${out_dir}/validation_metrics
+    fi
+
+    perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
 fi
 
 #------------------------------------------------------------------------------------------

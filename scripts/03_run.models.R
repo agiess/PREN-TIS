@@ -118,7 +118,7 @@ write.csv(sorted.10fold, file=args[5])
 #run models
 
 #hyper_params = list( ntrees = seq(50,1000,50) )
-hyper_params = list( ntrees = seq(200,1000,200) )
+hyper_params = list( ntrees = seq(100,1000,100) )
 
 #tidy up the factor names from the glkm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)
@@ -210,7 +210,7 @@ write.csv(test.out,file=args[10])
 
 
 #output roc plot from testing set
-ggsave(file=,args[11], out1, width=500, height=400, unit="mm", dpi=300)
+ggsave(file=,args[11], roc_plot)
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 ### Stop 2 stop
