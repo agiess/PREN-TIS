@@ -297,6 +297,6 @@ for my $chrH (keys %keepers){
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-print "Counts:\n$ano\t#1 Predictions matching annotated start codons\n$tru\t#2 Predicted truncations\n$elo\t#3 Predicted extensions\n";
+#print "Counts:\n$ano\t#1 Predictions matching annotated start codons\n$tru\t#2 Predicted truncations\n$elo\t#3 Predicted extensions\n";
 
 exit;

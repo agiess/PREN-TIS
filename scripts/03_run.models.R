@@ -117,8 +117,7 @@ write.csv(sorted.10fold, file=args[5])
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #run models
 
-#hyper_params = list( ntrees = seq(50,1000,50) )
-hyper_params = list( ntrees = seq(100,1000,100) )
+hyper_params = list( ntrees = seq(50,1000,50) )
 
 #tidy up the factor names from the glkm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)
@@ -169,6 +168,7 @@ write.csv(rf.out,file=args[6])
 #output random forest parameter important values
 write.csv(tree.10fold.var.imp,file=args[7])
 
+
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #Evalulate the performance on a test set
 rf.test <- h2o.performance(best.model.tree.10fold, newdata = test.hex)
@@ -212,6 +212,7 @@ write.csv(test.out,file=args[10])
 #output roc plot from testing set
 ggsave(file=,args[11], roc_plot)
 
+
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 ### Stop 2 stop
 
@@ -238,8 +239,5 @@ stop2stop$pred_pos<-format(stop2stop$pred_pos, scientific = FALSE)
 #write predictions
 write.csv(stop2stop,file=args[12])
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#close h2o connection
-h2o.shutdown(prompt = FALSE)
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

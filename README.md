@@ -62,17 +62,17 @@ The algorithm carries out the following steps:
 # Output files #
 ################
 
-{prefix}_ORF_predictions.bed
+prefix_ORF_predictions.bed
 
-model_metrics/
-    {prefix}_training_glm_summary.csv 
-    {prefix}_training_glm_coefficients.csv 
-    {prefix}_training_randomforest_summary.csv 
-    {prefix}_training_randomforest_variable_importance.csv 
-    {prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv 
-    {prefix}_test_randomforest_performance_confusion_matrix.csv 
-    {prefix}_test_randomforest_performance_summary.csv 
-    {prefix}_test_randomforest_performance_roc_plot.pdf 
+model_metrics:
+    prefix_training_glm_summary.csv 
+    prefix_training_glm_coefficients.csv 
+    prefix_training_randomforest_summary.csv 
+    prefix_training_randomforest_variable_importance.csv 
+    prefix_test_randomforest_performance_thresholds_and_metric_scores.csv 
+    prefix_test_randomforest_performance_confusion_matrix.csv 
+    prefix_test_randomforest_performance_summary.csv 
+    prefix_test_randomforest_performance_roc_plot.pdf 
 
-validation_metrics/
-    {prefix}_performance_on_validated_TIS.txt
+validation_metrics:
+    prefix_performance_on_validated_TIS.txt
