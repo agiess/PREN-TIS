@@ -1,11 +1,10 @@
-PREN-TIS
+# PREN-TIS
 
 A generalised machine learning framework to exploit experimental ribo-seq read lengths patterns for accurate genome wide identification of prokaryotic translation initiation sites.
 
-################
-# Prerequisites #
-################
+### Prerequisites
 
+```
 samtools
 
 perl
@@ -15,28 +14,29 @@ r
 r package: h2o 
 r package: ggplot2
 r package: data.table
+```
 
-#######################
-# Running the program #
-#######################
+### Running the program 
 
+```
 To launch PREN-TIS simply run the pren_tis.sh wrapper
 
 OPTIONS:
     -b  bam file of aligned ribo-seq reads
     -g  genome gtf file
     -f  genome fasta file
-    -v  validated open reading frames in bed format (optional)
     -o  output directory
+    -v  validated translation initiatino sites in bed format (optional)
     -i  minimum ribo-seq read length (optional)
     -a  maximum ribo-seq read length (optional)
     -h  this help message
+```
 
-example usage: trim_and_align.sh -f <in.fasta.dir> -o <out_dir> -s Zv9
+```
+example usage: pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <genome.fasta>
+```
 
-#############
-# Algorithm #
-#############
+### Algorithm
 
 The algorithm carries out the following steps:
 
@@ -58,10 +58,9 @@ The algorithm carries out the following steps:
 
 7) Tidy up: delete the temporary sam file
 
-################
-# Output files #
-################
+### Output files
 
+```
 prefix_ORF_predictions.bed
 
 model_metrics:
@@ -76,3 +75,4 @@ model_metrics:
 
 validation_metrics:
     prefix_performance_on_validated_TIS.txt
+```
