@@ -119,7 +119,7 @@ write.csv(sorted.10fold, file=args[5])
 
 hyper_params = list( ntrees = seq(50,1000,50) )
 
-#tidy up the factor names from the glkm so that they match the original column names 
+#tidy up the factor names from the glm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)
 tidy2 <- gsub("(seq_[0-9]+).*", "\\1", tidy1)
 tidy3 <- gsub("(seq_.[0-9]+).*", "\\1", tidy2)
@@ -170,7 +170,7 @@ write.csv(tree.10fold.var.imp,file=args[7])
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#Evalulate the performance on a test set
+#Evalulate the performance on the testing set
 rf.test <- h2o.performance(best.model.tree.10fold, newdata = test.hex)
 
 confusion.matrix <- h2o.confusionMatrix(rf.test)

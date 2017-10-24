@@ -32,11 +32,11 @@ EOF
 }
 
 while getopts ":b:g:f:i:a:o:v:h" opt; do
-	case $opt in
-		b)
-			input_bam=$OPTARG
-		  	echo "-b input bam alignment file $OPTARG"
-		  	;;
+    case $opt in
+        b)
+            input_bam=$OPTARG
+            echo "-b input bam alignment file $OPTARG"
+            ;;
         g)
             genome_gtf=$OPTARG
             echo "-g genome gtf file $OPTARG"
@@ -45,10 +45,10 @@ while getopts ":b:g:f:i:a:o:v:h" opt; do
             genome_fasta=$OPTARG
             echo "-f genome fasta file $OPTARG"
             ;;
-		i)	
-			minimum_length=$OPTARG
-			echo "-m minimum ribo-seq read length $OPTARG"
-			;;
+        i)	
+            minimum_length=$OPTARG
+            echo "-m minimum ribo-seq read length $OPTARG"
+            ;;
         a) 
             maximum_length=$OPTARG
             echo "-i maximum ribo-seq read length $OPTARG"
@@ -61,16 +61,16 @@ while getopts ":b:g:f:i:a:o:v:h" opt; do
             validation_bed=$OPTARG
             echo "-v validated regions in Bed format  $OPTARG"
             ;;
-		h)
-			usage
-			exit
-			;;
-		?) 
-			echo "Invalid option: -$OPTARG"
-			usage
-			exit 1
-		  	;;
-	esac
+        h)
+            usage
+            exit
+            ;;
+        ?) 
+            echo "Invalid option: -$OPTARG"
+            usage
+            exit 1
+            ;;
+    esac
 done
 
 if [ ! $input_bam ] || [ ! $genome_gtf ] || [ ! $genome_fasta ] || [ ! $out_dir ]; then
