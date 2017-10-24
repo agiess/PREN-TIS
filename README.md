@@ -26,7 +26,7 @@ OPTIONS:
     -g  genome gtf file
     -f  genome fasta file
     -o  output directory
-    -v  validated translation initiatino sites in bed format (optional)
+    -v  validated translation initiation sites in bed format (optional)
     -i  minimum ribo-seq read length (optional)
     -a  maximum ribo-seq read length (optional)
     -h  this help message
@@ -41,23 +41,23 @@ pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <gen
 
 The algorithm carries out the following steps:
 
-1) Convert the bam file to a sam file
+1) Convert the bam file to a sam file.
 
-2) Calculate values for features at all potential translation sites (TIS), for all genes in the gtf file
+2) Calculate values for features at all potential translation sites (TIS), for all genes in the gtf file.
 
-3) Select positive and negative examples for model training
+3) Select positive and negative examples for model training.
 
-4) Define training and testing sets
-   Feature selection with a glm using the training set. Alpha and lambda values are tuned with 10 fold cross validation
-   Randomforest model training using the training set and the selected features. Number of trees tuned with 10 fold cross validation 
-   Report randomforest model metrics on the testing set 
-   Score all potential TISs with the randomforest model
+4) Define training and testing sets.
+   Select features with a glm, using the training set. Alpha and lambda values are tuned with 10 fold cross validation.
+   Train a randomforest model using the training set and the selected features. The number of trees is tuned with 10 fold cross validation. 
+   Report the randomforest model metrics on the testing set. 
+   Score all potential TISs with the randomforest model.
 
-5) Select the most likely TIS for each annotated gene
+5) Select the most likely predicted TIS for each annotated gene.
 
-6) (optional) Access the predicted TIS with validated TIS from independent methods, such as N-terminal proteomics
+6) (optional) Access the predicted TIS against validated TIS from independent methods, such as N-terminal proteomics.
 
-7) Tidy up: delete the temporary sam file
+7) Remove temporary files.
 
 ## Output files
 
