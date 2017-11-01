@@ -111,7 +111,8 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+/net/apps/cbu/src/samtools-1.2/samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+#samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
 #2 Matrix of stop to stop regions

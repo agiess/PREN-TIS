@@ -270,7 +270,7 @@ print "sam parsed\n";
 open (OUT, ">$out_file") || die;
 
 #header
-print OUT "#id,codon,dir,canonical_candidate_sites_ORF_region,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,window_up_down_ratio,proprtion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
+print OUT "#id,codon,dir,canonical_candidate_sites_ORF_region,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,proportion_of_reads_at_position,proportion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
 
 for my $hpos (-$WINDOW_START .. $WINDOW_END){
     print OUT ",seq_".$hpos;    
@@ -321,7 +321,8 @@ for my $chr (sort keys %fasta_sequences){
                 }
             }
 
-            my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;            
+#            my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;            
+            my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
             my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
             my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
@@ -332,7 +333,7 @@ for my $chr (sort keys %fasta_sequences){
             #fkpm + codon rank here
             my ($ORF_FPKM, $codon_rank)=&stop2stop_rev($chr,$codon_pos);
 
-            print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$window_up_down_ratio,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+            print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
                 
             #Loop through sequence here
             my @seq_out=split("",$window_seq); #window seq is already reversed
@@ -396,7 +397,8 @@ for my $chr (sort keys %fasta_sequences){
                 }
             }
                 
-            my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;
+            #my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;
+            my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
             my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
             my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
@@ -406,7 +408,7 @@ for my $chr (sort keys %fasta_sequences){
             #fkpm + codon rank here
             my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$codon_pos);
 
-            print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$window_up_down_ratio,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+            print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
       
             #Loop through sequence here
             #output sequence
