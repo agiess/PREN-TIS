@@ -73,6 +73,7 @@ model_metrics:
     prefix_test_randomforest_performance_confusion_matrix.csv 
     prefix_test_randomforest_performance_summary.csv 
     prefix_test_randomforest_performance_roc_plot.pdf 
+    prefix_variable_importance_heatmaps.pdf
 
 validation_metrics:
     prefix_performance_on_validated_TIS.txt
