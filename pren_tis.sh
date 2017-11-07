@@ -135,14 +135,23 @@ else
 fi
 
 #------------------------------------------------------------------------------------------
-#4 Train models andmake predictions
+#4 Train models and make predictions
 #------------------------------------------------------------------------------------------
 
 if [ ! -d ${out_dir}/model_metrics ]; then
     mkdir ${out_dir}/model_metrics
 fi
 
-Rscript scripts/03_run.models.R ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv
+Rscript scripts/03_run_models.R ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv
+
+#process GLM coefficients
+Rscript script/03_variable_importance_matrix_GLM.pl ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv
+
+#process RF variable importances
+Rscript script/03_variable_importance_matrix_RF.pl ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv 
+
+#plot variable importance heatmaps
+Rscript script/03_plot_variables.R ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv ${out_dir}/model_metrics/${prefix}_variable_importance_heatmaps.pdf
 
 #------------------------------------------------------------------------------------------
 #5 Summarise the predictions
