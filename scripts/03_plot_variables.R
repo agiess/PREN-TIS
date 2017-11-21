@@ -9,7 +9,7 @@ library(gridExtra)
 # GLM
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 
-glm.matrix.neg<-read.csv(arg1[1], header=TRUE)
+glm.matrix.neg<-read.csv(args[1], header=TRUE)
 
 glm.matrix.neg.subset1<-subset(glm.matrix.neg, length <= 40)
 glm.matrix.neg.subset2<-subset(glm.matrix.neg, length >= 50)
