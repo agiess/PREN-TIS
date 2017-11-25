@@ -37,13 +37,24 @@ while (<GENES>){
 
             if ($dir eq "+"){ #use start positions as begining of feature
                 $gene_regions_fwd_start{$gene_id}=$prim5;
-                $gene_regions_fwd_stop{$gene_id}=$prim3+3; #+3 because the cds does not include the stop codon
-                $stops_fwd{$chr}{$prim3+3}=$gene_id;
+                $gene_regions_fwd_stop{$gene_id}=$prim3; #+3 because the cds does not include the stop codon
+                $stops_fwd{$chr}{$prim3}=$gene_id;
             }else{
                 $gene_regions_rev_start{$gene_id}=$prim3;
-                $gene_regions_rev_stop{$gene_id}=$prim5-3; #-3 becuase the cds does not include the stop codon
-                $stops_rev{$chr}{$prim5-3}=$gene_id;
+                $gene_regions_rev_stop{$gene_id}=$prim5; #-3 becuase the cds does not include the stop codon
+                $stops_rev{$chr}{$prim5}=$gene_id;
             }
+
+           # if ($dir eq "+"){ #use start positions as begining of feature
+           #     $gene_regions_fwd_start{$gene_id}=$prim5;
+           #     $gene_regions_fwd_stop{$gene_id}=$prim3+3; #+3 because the cds does not include the stop codon
+           #     $stops_fwd{$chr}{$prim3+3}=$gene_id;
+           # }else{
+           #     $gene_regions_rev_start{$gene_id}=$prim3;
+           #     $gene_regions_rev_stop{$gene_id}=$prim5-3; #-3 becuase the cds does not include the stop codon
+           #     $stops_rev{$chr}{$prim5-3}=$gene_id;
+           # }
+
         }
     }
 }
@@ -92,10 +103,10 @@ while (<MAT>){
         my ($CHR, $POS) = $l[0] =~ /^"(.*)_(\d+)_(fwd|rev)"$/;
 
         if ($dir eq "\"fwd\""){ #forward cases
-
+ 
             #search for the next in frame stop codon
             my $search=1;
-            my $pos=$POS-1;
+            my $pos=$POS-1;  #minus one to match zero based fasta index
             while ($search){
                 $pos=$pos+3; #only in frame positions
                 if ($pos>length($fasta_sequences{$CHR})){ last; } #check that we don't go out of chr limits
@@ -107,7 +118,7 @@ while (<MAT>){
                     if (exists ($stopCodonScores{$CHR}{$dir}{$pos}) ){
                         if ($pos_prob > $stopCodonScores{$CHR}{$dir}{$pos}){ #new winner
                             $stopCodonScores{$CHR}{$dir}{$pos}=$pos_prob;
-                            $keepers{$CHR}{$dir}{$pos}=$row;
+                            $keepers{$CHR}{$dir}{$pos}=$row; 
                         }
                     }else{ #initalise
                         $stopCodonScores{$CHR}{$dir}{$pos}=$pos_prob;
@@ -116,7 +127,6 @@ while (<MAT>){
                 }
             }  
         }else{ #rev cases
-             
             my $search=1;
             my $pos=$POS-1;
             while ($search){
@@ -154,7 +164,7 @@ for my $chr (keys %keepers){
 print "there are $rowCount predictions, and $distinctCount distinct predictions\n"; 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#open matrix assign predictions to classes, filter on reads  + prediction value
+#output predicted regions in bed format, classify as tuncated, elongated or matching compared to anottated genes
 my $ano=0;
 my $tru=0;
 my $elo=0;
@@ -218,11 +228,9 @@ for my $chrH (keys %keepers){
                             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
                                 $search=0;
 
-                                my $region=substr($fasta_sequences{$CHR},($POS-1),(($pos)-$POS+4));   #offset by 1
-
                                 #check if the stop codon matches an annotated gene
                                 my $pred_start=$POS;
-                                my $pred_end=$pos+3;
+                                my $pred_end=$pos+3; #this should be the end of the stop codon =+2 (+1 for fasta index)
 
                                 if (exists ($stops_fwd{$CHR}{$pred_end} )){
 
@@ -261,9 +269,6 @@ for my $chrH (keys %keepers){
                             #check for start codon
                             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
                                 $search=0;
-
-                                my $region= reverse ( substr ($fasta_sequences{$CHR}, ($pos-2), ( ($POS)-$pos+2) ) );   #offset by 1
-                                $region=~tr/ACGTacgt/TGCAtgca/;
 
                                 #check if the stop codon matches an annotated gene
                                 my $pred_start=$POS;  #right most of prediction

@@ -50,7 +50,7 @@ box_glm <-ggplot(data=glm.merge, aes(x=position, y=length, fill=standardized_coe
   geom_rect(aes(xmin=-20.5,xmax=20.5,ymin=18.5,ymax=19.5), color="black", size=0.5, fill=NA) +
   scale_x_continuous(limits = c(-21,21), expand = c(0, 0), breaks=c(-20,-15,-10,-5,0,5,10,15,20)) +
   scale_y_continuous(limits = c(18,44), expand = c(0, 0), breaks=c(19,20,25,30,35,40,41,42,43), labels=c("Nucleotide_sequence","20","25","30","35","40","Proportion_of_reads","ORF_FPKM","Number_of_upstream_TIS")) + 
-  scale_fill_gradientn(colours=c("#5e3c99", "#b2abd2", "white", "#fee0b6", "#f1a340", "#b35806"), values=c(-2,-0.00001,0,0.00001,0.1,6), rescaler = function(x,...) x, oob = identity, name="Score") +
+  scale_fill_gradientn(colours=c("#5e3c99", "#b2abd2", "white", "#fee0b6", "#f1a340", "#b35806"), values=c(-6,-0.0001,0,0.0001,0.1,6), rescaler = function(x,...) x, oob = identity, name="Score") +
   xlab("Position Relative to Start Codon") + 
   ylab("Fragment Length") +
   ggtitle("Scaled coefficients from the GLM") +
@@ -69,7 +69,7 @@ box_rf <-ggplot(data=rf.merge, aes(x=position, y=length, fill=value)) +
   geom_rect(aes(xmin=-20.5,xmax=20.5,ymin=18.5,ymax=19.5), color="black", size=0.5, fill=NA) +
   scale_x_continuous(limits = c(-21,21), expand = c(0, 0), breaks=c(-20,-15,-10,-5,0,5,10,15,20)) +
   scale_y_continuous(limits = c(18,44), expand = c(0, 0), breaks=c(19,20,25,30,35,40,41,42,43), labels=c("Nucleotide_sequence","20","25","30","35","40","Proportion_of_reads","ORF_FPKM","Number_of_upstream_TIS")) + 
-  scale_fill_gradientn(colours=c("white", "#ece2f0", "#a6bddb", "#1c9099"), values=c(0,0.01,0.05,1), rescaler = function(x,...) x, oob = identity, name="Score") +
+  scale_fill_gradientn(colours=c("white", "#ece2f0", "#a6bddb", "#1c9099"), values=c(0,0.05,0.1,1), rescaler = function(x,...) x, oob = identity, name="Score") +
   xlab("Position Relative to Start Codon") + 
   ylab("Fragment Length") +
   ggtitle("Scaled variable importance from the random forest") +

@@ -33,13 +33,16 @@ set.seed(9999)
 pos.ran <- pos.raw[sample(nrow(pos.raw)),]
 neg.ran <- neg.raw[sample(nrow(neg.raw)),]
 
-#set 1
-pos.train.raw <- pos.ran[1:1500,] 
-neg.train.raw <- neg.ran[1:6000,]
+count.train.pos<- nrow(pos.ran)*0.8
+count.train.neg<- (nrow(pos.ran)*0.8)*4
+
+#sets split 80% training, 20% testing
+pos.train.raw <- pos.ran[1:count.train.pos,] 
+neg.train.raw <- neg.ran[1:count.train.neg,]
 train.raw <- rbind(pos.train.raw, neg.train.raw)
 
-pos.test.raw <- pos.ran[1501:1700,]  
-neg.test.raw <- neg.ran[6001:6800,]
+pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
+neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
 test.raw <- rbind(pos.test.raw, neg.test.raw)
 
 train.raw$y=as.factor(train.raw$annotated_start_site)
@@ -117,7 +120,7 @@ write.csv(sorted.10fold, file=args[5])
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #run models
 
-hyper_params = list( ntrees = seq(50,1000,50) )
+hyper_params = list( ntrees = seq(100, 1000,100) )
 
 #tidy up the factor names from the glm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)

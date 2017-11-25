@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#AG 20/10/17
+#AG 23/12/17
 #script to run TIS predictions 
 #1 Bam to Sam
 #2 Matrix of stop to stop regions
@@ -59,7 +59,7 @@ while getopts ":b:g:f:i:a:o:v:h" opt; do
             ;;
         v) 
             validation_bed=$OPTARG
-            echo "-v validated regions in Bed format  $OPTARG"
+            echo "-v validated regions in bed format  $OPTARG"
             ;;
         h)
             usage
@@ -131,7 +131,7 @@ fi
 if [ $validation_bed ]; then
     perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv $validation_bed
 else
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv
+   perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv
 fi
 
 #------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ if [ $validation_bed ]; then
         mkdir ${out_dir}/validation_metrics
     fi
 
-    perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
+    perl scripts/05_prediction_validation_ecoli.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
 fi
 
 #------------------------------------------------------------------------------------------

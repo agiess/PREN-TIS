@@ -53,20 +53,20 @@ while (<GENES>){
 
             if ($dir eq "+"){ #use start positions as begining of feature
                 $gene_regions_fwd_start{$gene_id}=$prim5;
-                $gene_regions_fwd_stop{$chr}{$prim3+3}=$gene_id; #+3 because the cds does not include the stop codon
-                $gene_regions_fwd{$chr}{$prim5}{$prim3+3}=$gene_id;
+                $gene_regions_fwd_stop{$chr}{$prim3}=$gene_id;
+                $gene_regions_fwd{$chr}{$prim5}{$prim3}=$gene_id;
                 $gene_fwd_start{$gene_id}=$prim5;
-                $gene_fwd_stop{$gene_id}=$prim3+3;
+                $gene_fwd_stop{$gene_id}=$prim3;
                 $gene_chr{$gene_id}=$chr;
-                $gene_info_fwd{$gene_id}{$prim5}=$prim3+3;
+                $gene_info_fwd{$gene_id}{$prim5}=$prim3;
             }else{
                 $gene_regions_rev_start{$gene_id}=$prim3;
-                $gene_regions_rev_stop{$chr}{$prim5-3}=$gene_id; #-3 becuase the cds does not include the stop codon
-                $gene_regions_rev{$chr}{$prim5-3}{$prim3}=$gene_id;
-                $gene_rev_start{$gene_id}=$prim5-3;
+                $gene_regions_rev_stop{$chr}{$prim5}=$gene_id;
+                $gene_regions_rev{$chr}{$prim5}{$prim3}=$gene_id;
+                $gene_rev_start{$gene_id}=$prim5;
                 $gene_rev_stop{$gene_id}=$prim3;
                 $gene_chr{$gene_id}=$chr;
-                $gene_info_rev{$gene_id}{$prim3}=$prim5-1; 
+                $gene_info_rev{$gene_id}{$prim3}=$prim5-1;
             }
         }
     }
@@ -91,10 +91,10 @@ while (<PEP>){
         #assign to metaplots 
         if ($dir eq "+"){                                      #fwd cases
             #five_prime=$start;
-            $n_term_fwd{$chr}{$start}=$stop-3;
+            $n_term_fwd{$chr}{$start}=$stop;
         }else{                                                 #reverse cases
             #five_prime=$stop;
-            $n_term_rev{$chr}{$stop}=$start+3;
+            $n_term_rev{$chr}{$stop}=$start;
         }
     }
 }
@@ -147,7 +147,7 @@ for my $c (sort keys %n_term_fwd ){
                 }elsif($five > $gene_fwd_start{$gene} ){           #trunaction
                     $n_term_assignment_fwd{$c}{$three}{$five}="tru";
                     $n_sum_tru++;
-                }elsif($five < $gene_fwd_start{$gene}){            #elongation (999bp)
+                }elsif($five < $gene_fwd_start{$gene}){            #elongation
                     $n_term_assignment_fwd{$c}{$three}{$five}="elo";
                     $n_sum_elo++;
                 }
@@ -169,7 +169,7 @@ for my $c (sort keys %n_term_rev ){
                 }elsif($five < $gene_rev_stop{$gene} ){            #truncation
                     $n_term_assignment_rev{$c}{$three}{$five}="tru";
                     $n_sum_tru++;
-                }elsif($five > $gene_rev_stop{$gene}){             #elongation (999bp)                        
+                }elsif($five > $gene_rev_stop{$gene}){             #elongation                      
                     $n_term_assignment_rev{$c}{$three}{$five}="elo";
                     $n_sum_elo++;
                 }
@@ -210,36 +210,36 @@ while (<BED>){
         if ($dir eq "+"){
 
             #check if the region shares a stop codon with a peptide
-            if (exists ($n_term_assignment_fwd{$chr}{$stop-3}) ){  
+            if (exists ($n_term_assignment_fwd{$chr}{$stop}) ){  
 
-                for my $nstart (keys %{ $n_term_assignment_fwd{$chr}{$stop-3} } ){
+                for my $nstart (keys %{ $n_term_assignment_fwd{$chr}{$stop} } ){
 
                     if ($type eq "Annotated"){
-                        if ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "ann"){
+                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){
                             if ($start == $nstart){ $call{$chr}{$stop}="ano_ano"; }
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){ 
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){ 
                             $call{$chr}{$stop}="ano_tru"; 
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
                             $call{$chr}{$stop}="ano_elo";
                         }
 
                     #check for extensions
                     }elsif ( $type eq "Extension"){
-                        if ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "ann"){ 
+                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){ 
                             $call{$chr}{$stop}="elo_ano";
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){ 
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){ 
                             $call{$chr}{$stop}="elo_tru"; 
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
                             if ($start == $nstart){ $call{$chr}{$stop}="elo_elo"; }
                         } 
 
                     #otherwise truncation
                     }elsif ( $type eq "Truncation"){
-                        if ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "ann"){ 
+                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){ 
                             $call{$chr}{$stop}="tru_ano";
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "tru"){
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){
                             if ($start == $nstart){ $call{$chr}{$stop}="tru_tru"; }
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop-3}{$nstart} eq "elo"){ 
+                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
                             $call{$chr}{$stop}="tru_elo";
                         }
                     }
@@ -252,34 +252,34 @@ while (<BED>){
             #stop is 5' (start)
 
             #check if the region shares a stop codon with a peptide
-            if (exists ($n_term_assignment_rev{$chr}{$start+3} ) ){
+            if (exists ($n_term_assignment_rev{$chr}{$start} ) ){
 
-                for my $nstop (keys %{ $n_term_assignment_rev{$chr}{$start+3}} ){
+                for my $nstop (keys %{ $n_term_assignment_rev{$chr}{$start}} ){
 
                     if ($type eq "Annotated"){
-                        if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ann"){ 
+                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ann"){ 
                             if ($stop == $nstop){ $call{$chr}{$start}="ano_ano"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){ 
                             $call{$chr}{$start}="ano_tru";
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
                             $call{$chr}{$start}="ano_elo";
                         }
 
                     }elsif ($type eq "Extension"){
-                        if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
+                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
                             if ($stop == $nstop){ $call{$chr}{$start}="elo_elo"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){ 
                             $call{$chr}{$start}="elo_tru";
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ano"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ano"){ 
                             $call{$chr}{$start}="elo_ano"; 
                         }
                  
                     }elsif ($type eq "Truncation"){
-                        if ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "tru"){
+                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){
                             if ($stop == $nstop){ $call{$chr}{$start}="tru_tru"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "ann"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ann"){ 
                             $call{$chr}{$start}="tru_ano";
-                        }elsif ($n_term_assignment_rev{$chr}{$start+3}{$nstop} eq "elo"){ 
+                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
                             $call{$chr}{$start}="tru_elo"; 
                         }
                     }
@@ -375,7 +375,7 @@ sub stopToStopFromGTF {
             #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
             my $search=1;
             my $count=0;  #set upper limit to 1000 (100)
-            my $pos=$annotated_start-1;
+            my $pos=$annotated_start-1; #-1 because of 0 based fasta offset 
 
             while ($search){
                 $pos=$pos-3;
@@ -396,6 +396,7 @@ sub stopToStopFromGTF {
             #also loop for cds and in frame positions
             my $frameCount=0;
             for ($pos+4 .. $gene_info_fwd{$gene}{$annotated_start}){
+
                 $frameCount++;
                 if ($frameCount%3 == 1){
                     $in_frame_fwd{$gene_2_chr{$gene}}{$_}{$gene}=1;
@@ -484,7 +485,7 @@ sub countTIS {
                 #also loop for cds and in frame positions
                 my $frameCount=0;
                 for ($pos+4 .. $gene_info_fwd{$gene}{$annotated_start}){
-                    $frameCount++;
+                   $frameCount++;
                     if ($frameCount%3 == 1){
                         #count the number of inframe near canonical positions here. 
                         #restrict to those genes with N-termnial support

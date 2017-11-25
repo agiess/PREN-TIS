@@ -56,11 +56,11 @@ while (<GENES>){
                 if (exists( $multi_exon{$gene_id}) ){
                     $gene_lengths{$gene_id}+=($end+1)-$start;  #add on this start to end
                     my $previous_start=$start_codon{$gene_id};
-                    $gene_info_fwd{$gene_id}{$previous_start}=$end; #stops  
+                    $gene_info_fwd{$gene_id}{$previous_start}=($end-2); #stops  
                 }else{
                     $start_codon{$gene_id}=$start; #starts
                     $ann_start_codon_fwd{$chr}{$start}=1;
-                    $gene_info_fwd{$gene_id}{$start}=$end; #stops      
+                    $gene_info_fwd{$gene_id}{$start}=($end-2); #stops      
                     $gene_lengths{$gene_id}=($end+1)-$start;  #start to end
                     $gene_2_chr{$gene_id}=$chr;
                     $multi_exon{$gene_id}=1
@@ -73,11 +73,11 @@ while (<GENES>){
                 if (exists ( $multi_exon{$gene_id}) ){
                     $gene_lengths{$gene_id}+=($end+1)-$start; #add on this end to start
                     my $previous_start=$start_codon{$gene_id};
-                    $gene_info_rev{$gene_id}{$previous_start}=$start;
+                    $gene_info_rev{$gene_id}{$previous_start}=($start+2);
                 }else{
                     $start_codon{$gene_id}=$end;
                     $ann_start_codon_rev{$chr}{$end}=1;
-                    $gene_info_rev{$gene_id}{$end}=$start;
+                    $gene_info_rev{$gene_id}{$end}=($start+2);
                     $gene_lengths{$gene_id}=($end+1)-$start; #end to start
                     $gene_2_chr{$gene_id}=$chr;
                     $multi_exon{$gene_id}=1;
@@ -122,15 +122,15 @@ for my $gene (keys %gene_info_fwd){
         my $pos=$stop_codon; #-4 to skip the stop codon
 
         while ($search){
-            $pos=$pos-3;
+            $pos=$pos-3;   
 
             #check that the substing is not smaller than the chr!
             if ($pos-3 < 0){ $search=0; }
                          
-            $stop_2_stop_fwd{ $gene_2_chr{$gene}}{$pos+1}=1;
+            $stop_2_stop_fwd{ $gene_2_chr{$gene} } {$pos}=1;
                    
             #check for stop codon
-            my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$pos,3);  
+            my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$pos-1,3);  
             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
                 $search=0;
             }
@@ -152,7 +152,7 @@ for my $gene (keys %gene_info_rev){
         #get first nucleotide of start codon then proceed upstream 3nt at a time until we find a stop codon (pattern match)     
         my $search=1;
         my $count=0;  #set upper limit to 999     
-        my $pos=$stop_codon+1;
+        my $pos=$stop_codon;
 
         while ($search){
             $pos=$pos+3;
@@ -160,10 +160,10 @@ for my $gene (keys %gene_info_rev){
             #check that the substing is not bigger or smaller than the chr!
             if ($pos+3>length($fasta_sequences{$gene_2_chr{$gene}})){ $search=0 }
 
-            $stop_2_stop_rev{ $gene_2_chr{$gene} } {$pos+1}=1;
+            $stop_2_stop_rev{ $gene_2_chr{$gene} } {$pos}=1;
 
             #check for stop codon
-            my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
+            my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-3,3)); #(-2 to leftmost codon position, -1 for fastq offset)
             $seq=~tr/ACGTacgt/TGCAtgca/;
             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
                 $search=0;
@@ -171,7 +171,8 @@ for my $gene (keys %gene_info_rev){
             if ($count>=333){ $search=0; }
 
             #exetend up to 999nt past the start codon
-            if ($pos > $annotated_start){
+ 
+           if ($pos > $annotated_start){
                 $count++;
             }
         }
@@ -305,58 +306,59 @@ for my $chr (sort keys %fasta_sequences){
             my $codon=reverse(substr($fasta_sequences{$chr},$codon_pos-3,3));    
             $codon=~tr/ACGTacgt/TGCAtgca/;
 
-            if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ $near_cognate="TRUE"; }
-            if (exists ($ann_start_codon_rev{$chr}{$codon_pos})){$annotated_start_site="TRUE";}
+            if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ #take only cognate and near cognate codons
+                $near_cognate="TRUE";
+                if (exists ($ann_start_codon_rev{$chr}{$codon_pos})){$annotated_start_site="TRUE";}
  
-            #parse all lenghts for count summaries (summmed over all fragment lengths)
-            for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                for my $win_pos (($codon_pos-$WINDOW_END) .. ($codon_pos+$WINDOW_START)){
-                    # up and downstream should be opposite for rev reads
-                    if (exists ($counts_rev{$chr}{$win_pos}{$len})){
-                        $win_sum+=$counts_rev{$chr}{$win_pos}{$len};
-                        if ($win_pos==$codon_pos){ $reads_at_pos+=$counts_rev{$chr}{$win_pos}{$len}; }
-                        if ($win_pos<$codon_pos){ $window_reads_downstream+=$counts_rev{$chr}{$win_pos}{$len}; }
-                        if ($win_pos>$codon_pos){ $window_reads_upstream+=$counts_rev{$chr}{$win_pos}{$len}; }
+                #parse all lenghts for count summaries (summmed over all fragment lengths)
+                for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                    for my $win_pos (($codon_pos-$WINDOW_END) .. ($codon_pos+$WINDOW_START)){
+                        # up and downstream should be opposite for rev reads
+                        if (exists ($counts_rev{$chr}{$win_pos}{$len})){
+                            $win_sum+=$counts_rev{$chr}{$win_pos}{$len};
+                            if ($win_pos==$codon_pos){ $reads_at_pos+=$counts_rev{$chr}{$win_pos}{$len}; }
+                            if ($win_pos<$codon_pos){ $window_reads_downstream+=$counts_rev{$chr}{$win_pos}{$len}; }
+                            if ($win_pos>$codon_pos){ $window_reads_upstream+=$counts_rev{$chr}{$win_pos}{$len}; }
+                        }
                     }
                 }
-            }
 
-#            my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;            
-            my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
-            my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
-            my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
+                my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
+                my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
+                my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
-            my $id=$chr."_".$codon_pos."_rev";
-            my $window_seq=reverse(substr($fasta_sequences{$chr}, ($codon_pos-($WINDOW_START+1)), ($WINDOW_START+$WINDOW_END+1)));  
-            $window_seq=~tr/ACGTacgt/TGCAtgca/;
+                my $id=$chr."_".$codon_pos."_rev";
+                my $window_seq=reverse(substr($fasta_sequences{$chr}, ($codon_pos-($WINDOW_START+1)), ($WINDOW_START+$WINDOW_END+1)));  
+                $window_seq=~tr/ACGTacgt/TGCAtgca/;
  
-            #fkpm + codon rank here
-            my ($ORF_FPKM, $codon_rank)=&stop2stop_rev($chr,$codon_pos);
+                #fkpm + codon rank here
+                my ($ORF_FPKM, $codon_rank)=&stop2stop_rev($chr,$codon_pos);
 
-            print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
                 
-            #Loop through sequence here
-            my @seq_out=split("",$window_seq); #window seq is already reversed
-            for my $nuc (@seq_out){
-                print OUT ",$nuc";
-            }
+                #Loop through sequence here
+                my @seq_out=split("",$window_seq); #window seq is already reversed
+                for my $nuc (@seq_out){
+                    print OUT ",$nuc";
+                }
 
-            #LOOP THROUGH LENGTHS HERE
-            for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                my $win_pos=$codon_pos+$WINDOW_START;
-                while ($win_pos >= $codon_pos-$WINDOW_END){
-                    my $signal=0;
-                    #riboseq signal       #%counts; #key = chr, key2 = position, value = counts.
-                    if (exists ($counts_rev{$chr}{$win_pos}{$len})){
-                         $signal=$counts_rev{$chr}{$win_pos}{$len};
-                    }
+                #LOOP THROUGH LENGTHS HERE
+                for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                    my $win_pos=$codon_pos+$WINDOW_START;
+                    while ($win_pos >= $codon_pos-$WINDOW_END){
+                        my $signal=0;
+                        #riboseq signal       #%counts; #key = chr, key2 = position, value = counts.
+                        if (exists ($counts_rev{$chr}{$win_pos}{$len})){
+                             $signal=$counts_rev{$chr}{$win_pos}{$len};
+                        }
                    
-                    my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;
-                    print OUT ",$fraction_of_window_signal";
-                    $win_pos--;
-                } 
+                        my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;
+                        print OUT ",$fraction_of_window_signal";
+                        $win_pos--;
+                    } 
+                }
+                print OUT "\n";
             }
-            print OUT "\n";
         }
     }
 }
@@ -382,57 +384,60 @@ for my $chr (sort keys %fasta_sequences){
         if (exists ($stop_2_stop_fwd{$chr}{$codon_pos})){ 
   
             my $codon=substr($fasta_sequences{$chr},$codon_pos-1,3);
-            if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ $near_cognate="TRUE"; }
-            if (exists ($ann_start_codon_fwd{$chr}{$codon_pos})){$annotated_start_site="TRUE";}
+            if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ #take only congate and near cognate codons
+
+                $near_cognate="TRUE";
+                if (exists ($ann_start_codon_fwd{$chr}{$codon_pos})){$annotated_start_site="TRUE";}
         
-            #parse all lenghts for count summaries (summmed over all fragment lengths)
-            for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                for my $win_pos (($codon_pos-$WINDOW_START) .. ($codon_pos+$WINDOW_END)){
-                    if (exists ($counts_fwd{$chr}{$win_pos}{$len})){
-                        $win_sum+=$counts_fwd{$chr}{$win_pos}{$len};
-                        if ($win_pos==$codon_pos){ $reads_at_pos+=$counts_fwd{$chr}{$win_pos}{$len}; }
-                        if ($win_pos>$codon_pos){ $window_reads_downstream+=$counts_fwd{$chr}{$win_pos}{$len}; }
-                        if ($win_pos<$codon_pos){ $window_reads_upstream+=$counts_fwd{$chr}{$win_pos}{$len}; }
+                #parse all lenghts for count summaries (summmed over all fragment lengths)
+                for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                    for my $win_pos (($codon_pos-$WINDOW_START) .. ($codon_pos+$WINDOW_END)){
+                        if (exists ($counts_fwd{$chr}{$win_pos}{$len})){
+                            $win_sum+=$counts_fwd{$chr}{$win_pos}{$len};
+                            if ($win_pos==$codon_pos){ $reads_at_pos+=$counts_fwd{$chr}{$win_pos}{$len}; }
+                            if ($win_pos>$codon_pos){ $window_reads_downstream+=$counts_fwd{$chr}{$win_pos}{$len}; }
+                            if ($win_pos<$codon_pos){ $window_reads_upstream+=$counts_fwd{$chr}{$win_pos}{$len}; }
+                        }
                     }
                 }
-            }
                 
-            #my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;
-            my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
-            my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
-            my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
+                #my $window_up_down_ratio=eval {$window_reads_downstream/$window_reads_upstream} || 0;
+                my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
+                my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
+                my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
-            my $id=$chr."_".$codon_pos."_fwd";
-            my $window_seq=substr($fasta_sequences{$chr}, ($codon_pos-($WINDOW_START+1)), ($WINDOW_START+$WINDOW_END+1));
+                my $id=$chr."_".$codon_pos."_fwd";
+                my $window_seq=substr($fasta_sequences{$chr}, ($codon_pos-($WINDOW_START+1)), ($WINDOW_START+$WINDOW_END+1));
  
-            #fkpm + codon rank here
-            my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$codon_pos);
+                #fkpm + codon rank here
+                my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$codon_pos);
 
-            print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
       
-            #Loop through sequence here
-            #output sequence
-            my @seq_out=split("",$window_seq);
-            for my $nuc (@seq_out){
-                print OUT ",$nuc";
-            }
-
-            #LOOP THROUGH LENGTHS HERE
-            for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                #second loop for output
-                for my $win_pos (($codon_pos-$WINDOW_START) .. ($codon_pos+$WINDOW_END)){                  
-                    my $signal=0;
-                    #riboseq signal
-                    #%counts; #key = chr, key2 = position, value = counts.
-                    if (exists ($counts_fwd{$chr}{$win_pos}{$len})){ 
-                        $signal+=$counts_fwd{$chr}{$win_pos}{$len};
-                    }
-
-                    my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;            
-                        print OUT ",$fraction_of_window_signal";
+                #Loop through sequence here
+                #output sequence
+                my @seq_out=split("",$window_seq);
+                for my $nuc (@seq_out){
+                    print OUT ",$nuc";
                 }
+
+                #LOOP THROUGH LENGTHS HERE
+                for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                    #second loop for output
+                    for my $win_pos (($codon_pos-$WINDOW_START) .. ($codon_pos+$WINDOW_END)){                  
+                        my $signal=0;
+                        #riboseq signal
+                        #%counts; #key = chr, key2 = position, value = counts.
+                        if (exists ($counts_fwd{$chr}{$win_pos}{$len})){ 
+                            $signal+=$counts_fwd{$chr}{$win_pos}{$len};
+                        }
+
+                        my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;            
+                            print OUT ",$fraction_of_window_signal";
+                    }
+                }
+                print OUT "\n";
             }
-            print OUT "\n";
         }
     }
 }
@@ -516,7 +521,7 @@ sub stop2stop_fwd{
    }
 
    my $ORF_FPKM=eval { (1000000000*$read_sum)/($total_counts*$ORF_length) } || 0;
-   return ($ORF_FPKM, $upstream_codons+1);
+   return ($ORF_FPKM, $upstream_codons);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -593,7 +598,7 @@ sub stop2stop_rev{
     }
 
     my $ORF_FPKM=eval { (1000000000*$read_sum)/($total_counts*$ORF_length) } || 0;  
-    return ($ORF_FPKM, $upstream_codons+1);
+    return ($ORF_FPKM, $upstream_codons);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

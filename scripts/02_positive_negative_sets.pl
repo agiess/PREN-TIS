@@ -1,15 +1,16 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 29/09/2017
+#21/11/2017
 #script to take a matrix of genomic positions and an optional bed file of supported start sites (for example N-terminal proteomics)
 #assign codons to neative and positive sets
-#take only the 50% highest genes by cds expression in thepositive set
+#take the 50% highest genes by cds expression in the positive set (exluding positions that will later be used for validation)
+#take a dandonly selected negative set of 4 times the number of positive examples (exluding poitions that will later be used for validation)
 
 my $matrix=$ARGV[0];
-my $out_positive=$ARGV[1]; #1000 start codons from upper 50% of genes by experssions, without n-termial support
-my $out_negative=$ARGV[2]; #8000 non start codons, without n-termini support (inframe)
-my $bed_file=$ARGV[3];     #hi confidence start sites (optional)
+my $out_positive=$ARGV[1]; #Start codons from upper 50% of genes by expression,
+my $out_negative=$ARGV[2]; #Inframe non-start codons
+my $bed_file=$ARGV[3];     #validated start sites (optional)
 
 ###################################################################################################
 my %n_term_fwd; #key=chr, key=start_position, value=count
@@ -130,18 +131,13 @@ for my $ORF (sort {$a <=> $b} @start_FPKM){
 	}
 }
 
-print "size = $size, median = $median_exp\n";
+print "Number of genes = $size, median gene FPKM = $median_exp\n";
 my $sizeUn=$#start_random; 
 my $sizeSu=$#start_supported; 
 
 if ($bed_file){
-    if ($sizeUn < 1800){
-        print "ERROR: There are not enough unsupported start codons to train the model, the predictions script requires at least 1700 positive examples\n";
-        exit;
-    }else{
-        print "there are $sizeUn unsupported start codons\n";
-        print "there are $sizeSu supporterd start codons\n";
-    }
+    print "There are $sizeUn unsupported start codons\n";
+    print "There are $sizeSu supporterd start codons\n";
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -149,22 +145,24 @@ if ($bed_file){
 my @positive;
 for my $line (@start_random){
     my @position=split(",",$line);
-    if ($position[12] >= $median_exp){ #filter on median exp!!!!!
+    if ($position[12] >= $median_exp){ #filter on median expression
     	push @positive, $line;
     }
 }
+my $pos_size=$#positive;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#output negative set3
+#The negative set should havev4 times the number of positive examples
 my @negative;
 my $size2=0;
-while ($size2 < 8000){
+while ($size2 < ($pos_size*4) ){
  
     #get element
     my $index = rand @not_start;
     push (@negative, splice @not_start, $index, 1);
     $size2++;
 }
+my $neg_size=$#negative;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #output
@@ -182,5 +180,8 @@ for (@positive){
 for (@negative){
     print OUT2 $_;
 }
+
+print "There are $pos_size positions in the positive training set\n";
+print "There are $neg_size positions in the negative training set\n";
 
 exit;
