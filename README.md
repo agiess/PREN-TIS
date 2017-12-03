@@ -26,6 +26,7 @@ OPTIONS:
     -g  genome gtf file
     -f  genome fasta file
     -o  output directory
+    .e  Flag for eukaryotic genomes (defaults to prokaryote)
     -v  validated translation initiation sites in bed format (optional)
     -i  minimum ribo-seq read length (optional)
     -a  maximum ribo-seq read length (optional)

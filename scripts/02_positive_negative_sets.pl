@@ -78,8 +78,9 @@ while (<MAT>){
         my $start_codon=$l[4];
         my $fpkm=$l[12]; 
 
-		my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)$/;     
-
+#		my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)$/;     
+        my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)/;
+ 
         #start codons
         if ($start_codon eq "TRUE"){ 
     

@@ -33,17 +33,21 @@ set.seed(9999)
 pos.ran <- pos.raw[sample(nrow(pos.raw)),]
 neg.ran <- neg.raw[sample(nrow(neg.raw)),]
 
-count.train.pos<- nrow(pos.ran)*0.8
+#count.train.pos<- nrow(pos.ran)*0.8
 #count.train.neg<- nrow(pos.ran)*0.8
-count.train.neg<- (nrow(pos.ran)*0.8)*4
+#count.train.neg<- (nrow(pos.ran)*0.8)*4
 
 #sets split 80% training, 20% testing
-pos.train.raw <- pos.ran[1:count.train.pos,] 
-neg.train.raw <- neg.ran[1:count.train.neg,]
+#pos.train.raw <- pos.ran[1:count.train.pos,] 
+#neg.train.raw <- neg.ran[1:count.train.neg,]
+pos.train.raw <- pos.ran[1:2000,]    #80%
+neg.train.raw <- neg.ran[1:8000,]    #80%
 train.raw <- rbind(pos.train.raw, neg.train.raw)
 
-pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
-neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
+#pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
+#neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
+pos.test.raw <- pos.ran[2001:2400,]  #20%
+neg.test.raw <- neg.ran[8001:9600,]  #20%
 test.raw <- rbind(pos.test.raw, neg.test.raw)
 
 train.raw$y=as.factor(train.raw$annotated_start_site)

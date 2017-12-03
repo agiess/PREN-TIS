@@ -23,17 +23,8 @@ my $WINDOW_START=20; #20 nt upstream
 my $WINDOW_END=20;   #20 nt downstream
 
 #1) find longest transcripts per gene
-#
 #2) setup transcript coords (1 .. n) to genomic coords, per gene. accounting for introns
-#
-#3) setup concaternated trnscript sequences. And a map of transcript sequences to position
-
-#I need to come up with a way to pass disjoint positions to the stop2stop methods
-#concatenate strings and store per longest transcript
-#store longest transcript positions to genome coords for each gene
-
-#later book keeping
-#calculate FPKM and upstream TIS from transcript models + concaternated seq
+#3) setup concaternated transcript sequences, map transcript coord to genomic position
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open gtf and get transcript lengths
@@ -54,7 +45,7 @@ while (<GENES1>){
         if ($gene_id && $transcript_id){
 
             if ($class eq "exon"){
-                if ($dir eq "+"){          #I porbably don't need to sepperate fwd+rev here
+                if ($dir eq "+"){        
                     for ($start .. $end){
                         $transcripts{$gene_id}{$transcript_id}++;   
                     }
@@ -68,7 +59,6 @@ while (<GENES1>){
     }
 }
 close (GENES1);
-
 
 #select longest transcripts per gene
 my %longest_transcript; #key=gene_id, value=transcript_id
@@ -111,32 +101,35 @@ while (<GENES2>){
         if ($gene_id && $transcript_id){
 
             #if the transcript is in the list of longest transcripts
-            if (exists ( $transcripts{$gene_id}{$transcript_id} )){
+            if (exists ( $longest_transcript{$gene_id} )){
 
-                $gene_2_chr{$gene_id}=$chr;
+                if ($transcript_id eq $longest_transcript{$gene_id}){
+ 
+                    $gene_2_chr{$gene_id}=$chr;
 
-                if ($dir eq "+"){ #fwd cases. Use start positions as 5'
+                    if ($dir eq "+"){ #fwd cases. Use start positions as 5'
 
-                    if ($class eq "start_codon"){ 
-                        $gene_start_codon_fwd{$gene_id}=$start;
-                    }
-                    if ($class eq "stop_codon"){ 
-                        $gene_stop_codon_fwd{$gene_id}=$start;
-                    }
-                    if ($class eq "exon"){
-                        $gene_exons_fwd{$gene_id}{$start}=$end; 
-                    }
+                        if ($class eq "start_codon"){ 
+                            $gene_start_codon_fwd{$gene_id}=$start;
+                        }
+                        if ($class eq "stop_codon"){ 
+                            $gene_stop_codon_fwd{$gene_id}=$start;
+                        }
+                        if ($class eq "exon"){
+                            $gene_exons_fwd{$gene_id}{$start}=$end; 
+                        }
 
-                }else{ #revese cases use end as 5'
-
-                    if ($class eq "start_codon"){
-                        $gene_start_codon_rev{$gene_id}=$end;
-                    }
-                    if ($class eq "stop_codon"){
-                        $gene_stop_codon_rev{$gene_id}=$end;
-                    }
-                    if ($class eq "exon"){
-                        $gene_exons_rev{$gene_id}{$start}=$end;
+                    }else{ #revese cases use end as 5'
+  
+                        if ($class eq "start_codon"){
+                            $gene_start_codon_rev{$gene_id}=$end;
+                        }
+                        if ($class eq "stop_codon"){
+                            $gene_stop_codon_rev{$gene_id}=$end;
+                        }
+                        if ($class eq "exon"){
+                            $gene_exons_rev{$gene_id}{$start}=$end;
+                        }
                     }
                 }
             }
@@ -287,8 +280,6 @@ for my $gene (keys %gene_exons_fwd){
             # start(-1)-> 100958 100975
             #             101077 101715 <-end(+1)
             
-#            print "$gene,$longest_transcript{$gene},$gene_2_chr{$gene},$exon_start,$exon_end\n";
-
             for ($exon_start .. $exon_end){
                 $gene_model_fwd{$gene}{$model_pos}=$_;
 
@@ -300,10 +291,7 @@ for my $gene (keys %gene_exons_fwd){
                     $stop2stop_start_coord_fwd{$gene}=$model_pos;    #find the index of the start codon per gene
                 }
                 $model_pos++;
-
-    #           print "$gene,$longest_transcript{$gene},$gene_2_chr{$gene},$_,$model_pos\n";
-
-            }       
+            }
         }
     }
 }
@@ -318,15 +306,10 @@ for my $gene (keys %gene_exons_rev){
         for my $exon_end (reverse (sort {$a <=> $b} keys %{ $gene_exons_rev{$gene} } )){
             my $exon_start=($gene_exons_rev{$gene}{$exon_end})+1;
 
-   #why do I need +1 here
-   #but not in the fwd example. The gtf shoulød be 1 bases at fwd + rev?
-
             #rev exons are sorted in decending order  
             #           447087 447794 <-start(+1)
             # end(-1)-> 446060 446254
 
-#            print "$gene,$longest_transcript{$gene},$gene_2_chr{$gene},$exon_start,$exon_end\n";
-           
             while ($exon_start > $exon_end){
                 $gene_model_rev{$gene}{$model_pos}=$exon_start;
 
@@ -338,14 +321,12 @@ for my $gene (keys %gene_exons_rev){
                 }
                 $model_pos++;
                 $exon_start--;
-
-#                print "$gene,$longest_transcript{$gene},$gene_2_chr{$gene},$exon_start,$model_pos\n";
             }
         }
     }
 }            
 
-my %start_of_stop2stop_fwd; #parse once to find how far upstream we should go. A.K.A. the beginning of the stopo2stop region
+my %start_of_stop2stop_fwd; #parse once to find how far upstream we should go. A.K.A. the beginning of the stop2stop region
 for my $gene (keys %stop2stop_start_coord_fwd){
 
     $start_of_stop2stop_fwd{$gene}=$stop2stop_start_coord_fwd{$gene}; #take the annotaed start codon as default.
@@ -361,14 +342,10 @@ for my $gene (keys %stop2stop_start_coord_fwd){
             my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+1)} -1), 1);
             my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+2)} -1), 1);
             my $seq=$codon1.$codon2.$codon3;
-    
-#            print "$gene,$chr,$coord,$gene_model_fwd{$gene}{$coord},$seq\n";
 
             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/){
                 $search=0;
-#                print "$gene,$longest_transcript{$gene},$chr,$seq,$stop2stop_start_coord_fwd{$gene}\n";
             }else{
-                #$start_of_stop2stop_fwd{$gene}=$gene_model_fwd{$gene}{$coord};
                 $start_of_stop2stop_fwd{$gene}=$coord;
             }
             $coord=$coord-3; #go the next upstream codon.
@@ -396,13 +373,9 @@ for my $gene (keys %stop2stop_start_coord_rev){
             my $seq=$codon1.$codon2.$codon3;
             $seq=~tr/ACGTacgt/TGCAtgca/;
 
-#            #print "$gene,$chr,$coord,$gene_model_rev{$gene}{$coord},$seq\n";
-
             if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/){
                 $search=0;
-#                print "$gene,$longest_transcript{$gene},$chr,$seq,$stop2stop_start_coord_rev{$gene}\n";
             }else{
-#                $start_of_stop2stop_rev{$gene}=$gene_model_rev{$gene}{$coord};
                 $start_of_stop2stop_rev{$gene}=$coord; 
            }
             $coord=$coord-3; #go the next upstream codon.
@@ -412,33 +385,7 @@ for my $gene (keys %stop2stop_start_coord_rev){
     }
 }
 
-
-#fwd if greater than start_of_stop2stop_fwd{$gene} and less than ( $stop2stop_stop_coord_fwd{$gene} -3 )
-#rev is less than start_of_stop2stop_rev{$gene} and greater than ( $stop2stop_stop_coord_rev{$gene} +3 )
-
-#parse again to setup the whole stop2stop index +/- 20
-#for my $gene (keys %gene_model){
-#    my $start_index=$stop2stop_start_coord{$gene}
-#    my $stop_index= $stop2stop_stop_coord{$gene}
-
-    #take positions betweem start and stop
-
-    #I can possibly do all of the assigning here
-
-#exit;
-
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#my %start_codon; #key=gene_id, value=pos
-#my %gene_info_fwd; #key=gene_id, key2=start, value=stop
-#my %gene_info_rev; #key=gene_id, key2=start, value=stop
-#my %gene_lengths; #for FPKM
-
-#my %ann_start_codon_fwd; #key=chr, key2=pos, value=1   #used for flags only
-#my %ann_start_codon_rev; #key=chr, key2=pos, value=1   
-#my %multi_exon;
-
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-
 #summarise and output matrix
 open (OUT, ">$out_file") || die;
 
@@ -457,7 +404,6 @@ for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
  
 print OUT "\n";
 
-
 #loop through longest transcripts of forwards genes;
 for my $gene (sort keys %start_of_stop2stop_fwd){
 
@@ -467,9 +413,6 @@ for my $gene (sort keys %start_of_stop2stop_fwd){
         my $chr=$gene_2_chr{$gene};
         my $start_coord=$start_of_stop2stop_fwd{$gene};
         my $stop_coord=($stop2stop_stop_coord_fwd{$gene})-3;
-
-    #shouldn't this also be +3 (in coord space)
-    #might  also fix the -20
 
         my $start_codon_coords=$stop2stop_start_coord_fwd{$gene};
         my $start_codon_genomic_pos1=$gene_start_codon_fwd{$gene};
@@ -495,15 +438,14 @@ for my $gene (sort keys %start_of_stop2stop_fwd){
                     my $window_reads_downstream=0;
                     my $window_reads_upstream=0;
                     my $win_sum=0;
-                    my $id=$chr."_".$gene_model_fwd{$gene}{$start_coord}."_fwd"; 
+                    my $id=$chr."_".$gene_model_fwd{$gene}{$start_coord}."_fwd_".$gene; 
 
                     #check for start codon
                     if ($start_coord == $stop2stop_start_coord_fwd{$gene}){
                          $annotated_start_site="TRUE";
                     }
 
-                #check up/downstream read proportions        
-                #parse all lenghts for count summaries (summmed over all fragment lengths)
+                    #parse all lenghts for count summaries (summmed over all fragment lengths)
                     for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
                         for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
                             if (exists ($counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len})){
@@ -558,16 +500,16 @@ for my $gene (sort keys %start_of_stop2stop_fwd){
 for my $gene (sort keys %start_of_stop2stop_rev){
 
     #make suer that we have annotated start and stop codons for this gene
-    if (exists ($stop2stop_stop_coord_rev{$gene})) {
+    if (exists ($stop2stop_stop_coord_rev{$gene})) {;
 
         my $chr=$gene_2_chr{$gene};
         my $start_coord=$start_of_stop2stop_rev{$gene};
-        my $stop_coord=($stop2stop_stop_coord_rev{$gene})+3;
+
+        my $stop_coord=($stop2stop_stop_coord_rev{$gene})-3;
 
         my $start_codon_coords=$stop2stop_start_coord_rev{$gene};
         my $start_codon_genomic_pos1=$gene_start_codon_rev{$gene};
         my $start_codon_genomic_pos2=$gene_model_rev{$gene}{ $start_codon_coords };
-        print OUT "$gene,$chr,$start_coord,$stop_coord,$start_codon_coords,$start_codon_genomic_pos1,$start_codon_genomic_pos2\n";
 
         while ($start_coord <= $stop_coord){
 
@@ -590,14 +532,14 @@ for my $gene (sort keys %start_of_stop2stop_rev){
                     my $window_reads_downstream=0;
                     my $window_reads_upstream=0;
                     my $win_sum=0;
-                    my $id=$chr."_".$gene_model_rev{$gene}{$start_coord}."_rev";
+                    my $id=$chr."_".$gene_model_rev{$gene}{$start_coord}."_rev_".$gene;
 
                     #check for start codon
                     if ($start_coord == $stop2stop_start_coord_rev{$gene}){
                          $annotated_start_site="TRUE";
                     }
 
-                   #parse all lenghts for count summaries (summmed over all fragment lengths)
+                    #parse all lenghts for count summaries (summmed over all fragment lengths)
                     for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
                         for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
                             if (exists ($counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len})){
@@ -700,8 +642,6 @@ sub stop2stop_fwd{
         }
     }
 
-    print "fwd,$GENE,$CHR,$TRANSCRIPT_COORD,$orf_length,$orf_sum\n";
-
     my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
     return ($orf_FPKM, $upstream_TIS); 
 }
@@ -713,7 +653,7 @@ sub stop2stop_rev{
     my $GENE=$_[1];
     my $TRANSCRIPT_COORD=$_[2];
 
-    my $stop_coord=($stop2stop_stop_coord_rev{$GENE})+3;  #shouldn't this also be -3? if were in  coord space
+    my $stop_coord=($stop2stop_stop_coord_rev{$GENE})-3;
     my $upstream_TIS=0;
 
     ###
@@ -749,8 +689,6 @@ sub stop2stop_rev{
             }
         }
     }
-
-    print "rev,$GENE,$CHR,$TRANSCRIPT_COORD,$orf_length,$orf_sum\n";
 
     my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
     return ($orf_FPKM, $upstream_TIS);
