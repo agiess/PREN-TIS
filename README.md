@@ -26,7 +26,7 @@ OPTIONS:
     -g  genome gtf file
     -f  genome fasta file
     -o  output directory
-    .e  Flag for eukaryotic genomes (defaults to prokaryote)
+    -e  flag for eukaryotic genomes (defaults to prokaryote)
     -v  validated translation initiation sites in bed format (optional)
     -i  minimum ribo-seq read length (optional)
     -a  maximum ribo-seq read length (optional)
@@ -79,3 +79,10 @@ model_metrics:
 validation_metrics:
     prefix_performance_on_validated_TIS.txt
 ```
+
+## Notes
+
+```
+When prokaryotic genomes are supplied the algorithm assumes that exon definitions in the gtf file contain stop codons.
+```
+
