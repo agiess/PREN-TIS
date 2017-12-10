@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#AG 07/12/17
+#AG 10/12/17
 #script to run TIS predictions 
 #1 Bam to Sam
 #2 Matrix of stop to stop regions
@@ -68,17 +68,17 @@ while getopts ":b:g:f:i:a:o:v:p:et:h" opt; do
             validation_bed=$OPTARG
             echo "-v validated regions in bed format $OPTARG"
             ;;
-        p)  
-            proportion_of_high_genes=$OPTARG
-            echo "-p use $OPTARG of the 50% most highly expressed genes as positive examples"
-            ;;
-        t)  
-            threads=$OPTARG
-            echo "-t use $OPTARG threads for model training and predictions"
-            ;;
         e)
             eukaryotic=1    
             echo "-e eukaryotic flag set"
+            ;;
+        p)  
+            proportion_of_high_genes=$OPTARG
+            #echo "-p use $OPTARG of the 50% most highly expressed genes as positive examples"
+            ;;
+        t)  
+            threads=$OPTARG
+            #echo "-t use $OPTARG threads for model training and predictions"
             ;;
         h)
             usage
@@ -118,22 +118,25 @@ if [ ! -d $out_dir ]; then
     exit 1
 fi
 
-#set default values
+#set default number of threads
 if [ ! $threads ]; then
    threads=1
 fi 
 
+#set default proportion values
 if [ ! $proportion_of_high_genes ]; then
 
     if [ $eukaryotic ]; then
-        proportion_of_high_genes=0.1
+        proportion_of_high_genes="0.1"
     else
-        proportion_of_high_genes=1.0
+        proportion_of_high_genes="1.0"
     fi
 
 else 
 
-   if (( $proportion_of_high_genes < 0 )) || (( $proportion_of_high_genes > 1 )); then 
+   check_with=1.0
+
+   if (( $(echo "$proportion_of_high_genes <= 0.0" | bc -l)  )) || (( $(echo "$proportion_of_high_genes > 1.0" | bc ) )); then 
 
        echo "ERROR: -p must be between zero and 1"
        exit 1
@@ -147,7 +150,7 @@ echo "-p use $proportion_of_high_genes of the 50% most highly expressed genes as
 
 name=$(basename $input_bam)
 prefix=${name%.bam}
-echo $prefix
+echo "Sample: $prefix"
 
 if [ ! -d ${out_dir}/tmp ]; then
     mkdir ${out_dir}/tmp
@@ -157,8 +160,7 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-/net/apps/cbu/src/samtools-1.2/samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
-#samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
 #2 Matrix of stop to stop regions
@@ -180,7 +182,7 @@ else
         perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
     fi
 
-fi
+#fi
 
 #------------------------------------------------------------------------------------------
 #3 Select positive and negative examples
@@ -188,7 +190,7 @@ fi
 
 if [ $validation_bed ]; then
 
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_gene $validation_bed
+    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $validation_bed
 
     if [ $? != 0 ] ; then
         echo "An error ocured in selection of the positive and negative sets"

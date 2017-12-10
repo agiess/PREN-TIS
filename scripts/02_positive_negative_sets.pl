@@ -136,20 +136,17 @@ for my $ORF (sort {$a <=> $b} @start_FPKM){
 
 print "There are $size genes\n";
 print "The median expression value is $median_exp FPKM\n";
-print "proprtion of highly expressed genes to select is $proportion\n";
+print "proportion of highly expressed genes to select is $proportion\n";
 
 my $positive_train=int((($size/2)*$proportion)*0.8);
 my $positive_test=int((($size/2)*$proportion)*0.2);
-
-print "there will be $positive_train annotated start codons used for model training\n";
-print "there will be $positive_test annotated start codons used for model testing\n";
 
 if ($bed_file){
     my $sizeUn=@start_random;
     my $sizeSu=@start_supported;
 
-    print "There are $sizeUn unsupported start codons\n";
-    print "There are $sizeSu supporterd start codons\n";
+    print "There are $sizeUn start codons that are not supported by the validation set\n";
+    print "There are $sizeSu start codons supported by the validation set\n";
 
     #check if there are enough highly expressed start codons after exlcuding validated positions
     if ((($size/2)-$sizeSu) < ($positive_train+$positive_test) ){
