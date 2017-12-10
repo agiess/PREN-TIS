@@ -329,8 +329,8 @@ print "tru,$pred_sum_tru,$tru_ano,$tru_elo,$tru_tru\n";
 #False -ve: Supported genes where no ORF was predicted.
 #True -ve:  All potential TIS in supported stop2stop regions, that were neither predicted nor supported.
 
-print "\nthere are $count_supported, genes with n-termnial info\n";
-print "there are $total_tis, candiate TIS in all supported genes\n";
+print "\nthere are $count_supported, genes with n-terminal info\n";
+print "there are $total_tis, candidate TIS in all supported genes\n";
 
 my $predicted_correct=$ano_ano+$elo_elo+$tru_tru;
 my $predicted_incorrect=$ano_elo+$ano_tru+$elo_ano+$elo_tru+$tru_ano+$tru_elo;
@@ -348,7 +348,7 @@ print "false negative: $supported_not_found\n";
 
 print "\nsensitivity: $sensitivity\n";
 print "specificity: $specificity\n";
-print "positive_predicitive_value: $precision\n";
+print "positive_predictive_value: $precision\n";
 
 exit;
 

@@ -35,26 +35,15 @@ while (<GENES>){
 
         if ($class eq "CDS"){
 
-            if ($dir eq "+"){ #use start positions as begining of feature
+            if ($dir eq "+"){ 
                 $gene_regions_fwd_start{$gene_id}=$prim5;
-                $gene_regions_fwd_stop{$gene_id}=$prim3; #+3 because the cds does not include the stop codon
+                $gene_regions_fwd_stop{$gene_id}=$prim3; 
                 $stops_fwd{$chr}{$prim3}=$gene_id;
             }else{
                 $gene_regions_rev_start{$gene_id}=$prim3;
-                $gene_regions_rev_stop{$gene_id}=$prim5; #-3 becuase the cds does not include the stop codon
+                $gene_regions_rev_stop{$gene_id}=$prim5; 
                 $stops_rev{$chr}{$prim5}=$gene_id;
             }
-
-           # if ($dir eq "+"){ #use start positions as begining of feature
-           #     $gene_regions_fwd_start{$gene_id}=$prim5;
-           #     $gene_regions_fwd_stop{$gene_id}=$prim3+3; #+3 because the cds does not include the stop codon
-           #     $stops_fwd{$chr}{$prim3+3}=$gene_id;
-           # }else{
-           #     $gene_regions_rev_start{$gene_id}=$prim3;
-           #     $gene_regions_rev_stop{$gene_id}=$prim5-3; #-3 becuase the cds does not include the stop codon
-           #     $stops_rev{$chr}{$prim5-3}=$gene_id;
-           # }
-
         }
     }
 }
@@ -100,7 +89,6 @@ while (<MAT>){
         my $pos_prob=$l[-1]; #last column
         $pos_prob =~ tr/"//d;
 
-#        my ($CHR, $POS) = $l[0] =~ /^"(.*)_(\d+)_(fwd|rev)"$/;
         my ($CHR, $POS) = $l[0] =~ /^\"(.*)_(\d+)_(fwd|rev)/;
 
         if ($dir eq "\"fwd\""){ #forward cases
@@ -203,7 +191,6 @@ for my $chrH (keys %keepers){
                 my $pos_prob=$l[-1];
                 $pos_prob =~ tr/"//d;
 
-#                my ($CHR, $POS) = $l[0] =~ /^"(.*)_(\d+)_(fwd|rev)"$/;
                 my ($CHR, $POS) = $l[0] =~ /^\"(.*)_(\d+)_(fwd|rev)/;
 
                 if ($prediction eq "\"pos\""){    

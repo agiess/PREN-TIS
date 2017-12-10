@@ -5,46 +5,48 @@ library (h2o)
 library (ggplot2)
 library (data.table)
 
+n.threads<-as.integer(args[15])
+
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #start a h2o instance
-h2o.init(nthreads = 1, max_mem_size="100g")
+h2o.init(nthreads = n.threads, max_mem_size="100g")
+#h2o.init(nthreads = 1, max_mem_size="100g")
 h2o.removeAll()
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 
-pos.raw<-read.csv(args[1], header=TRUE)
-neg.raw<-read.csv(args[2], header=TRUE)
+training.pos.raw<-read.csv(args[1], header=TRUE)
+training.neg.raw<-read.csv(args[2], header=TRUE)
+testing.pos.raw<-read.csv(args[3], header=TRUE)
+testing.neg.raw<-read.csv(args[4], header=TRUE)
 
-rownames(pos.raw) <- pos.raw[, 1]
-pos.raw <- pos.raw[,-1]
-pos.raw$seq_1[pos.raw$seq_1 == TRUE] <-"T"
-pos.raw[,13:53] <- lapply(pos.raw[,13:53] , factor)
-pos.raw[,54:ncol(pos.raw)] <- lapply(pos.raw[,54:ncol(pos.raw)] , as.numeric)
+rownames(training.pos.raw) <- training.pos.raw[, 1]
+training.pos.raw <- training.pos.raw[,-1]
+training.pos.raw$seq_1[training.pos.raw$seq_1 == TRUE] <-"T"
+training.pos.raw[,13:53] <- lapply(training.pos.raw[,13:53] , factor)
+training.pos.raw[,54:ncol(training.pos.raw)] <- lapply(training.pos.raw[,54:ncol(training.pos.raw)] , as.numeric)
 
-rownames(neg.raw) <- neg.raw[, 1]
-neg.raw <- neg.raw[,-1]
-neg.raw$seq_1[neg.raw$seq_1 == TRUE] <-"T"
-neg.raw[,13:53] <- lapply(neg.raw[,13:53] , factor)
-neg.raw[,54:ncol(pos.raw)] <- lapply(neg.raw[,54:ncol(pos.raw)] , as.numeric)
+rownames(training.neg.raw) <- training.neg.raw[, 1]
+training.neg.raw <- training.neg.raw[,-1]
+training.neg.raw$seq_1[training.neg.raw$seq_1 == TRUE] <-"T"
+training.neg.raw[,13:53] <- lapply(training.neg.raw[,13:53] , factor)
+training.neg.raw[,54:ncol(training.pos.raw)] <- lapply(training.neg.raw[,54:ncol(training.pos.raw)] , as.numeric)
 
-#the sets need to be randomised
-set.seed(9999)
-pos.ran <- pos.raw[sample(nrow(pos.raw)),]
-neg.ran <- neg.raw[sample(nrow(neg.raw)),]
+rownames(testing.pos.raw) <- testing.pos.raw[, 1]
+testing.pos.raw <- testing.pos.raw[,-1]
+testing.pos.raw$seq_1[testing.pos.raw$seq_1 == TRUE] <-"T"
+testing.pos.raw[,13:53] <- lapply(testing.pos.raw[,13:53] , factor)
+testing.pos.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.pos.raw[,54:ncol(testing.pos.raw)] , as.numeric)
 
-count.train.pos<- nrow(pos.ran)*0.8
-#count.train.neg<- nrow(pos.ran)*0.8
-count.train.neg<- (nrow(pos.ran)*0.8)*4
+rownames(testing.neg.raw) <- testing.neg.raw[, 1]
+testing.neg.raw <- testing.neg.raw[,-1]
+testing.neg.raw$seq_1[testing.neg.raw$seq_1 == TRUE] <-"T"
+testing.neg.raw[,13:53] <- lapply(testing.neg.raw[,13:53] , factor)
+testing.neg.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.neg.raw[,54:ncol(testing.pos.raw)] , as.numeric)
 
-#sets split 80% training, 20% testing
-pos.train.raw <- pos.ran[1:count.train.pos,] 
-neg.train.raw <- neg.ran[1:count.train.neg,]
-train.raw <- rbind(pos.train.raw, neg.train.raw)
-
-pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
-neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
-test.raw <- rbind(pos.test.raw, neg.test.raw)
+train.raw <- rbind(training.pos.raw, training.neg.raw) 
+test.raw <- rbind(testing.pos.raw, testing.neg.raw)
 
 train.raw$y=as.factor(train.raw$annotated_start_site)
 levels(train.raw$y) =c('neg','pos')
@@ -54,6 +56,8 @@ levels(test.raw$y) =c('neg','pos')
 train.hex <- as.h2o(train.raw, destination_frame="train.hex")
 test.hex <- as.h2o(test.raw, destination_frame = "test.hex")
 
+dim(train.hex)
+dim(test.hex)
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #h2o without parameter scaling cross validation
@@ -112,10 +116,10 @@ colnames(glm.out) <- c("metric")
 glm.out <- format(glm.out, scientific=F)
 
 #output glm model summary
-write.csv(glm.out, file=args[4])
+write.csv(glm.out, file=args[6])
 
 #output glm coefficients
-write.csv(sorted.10fold, file=args[5])
+write.csv(sorted.10fold, file=args[7])
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -142,7 +146,7 @@ tree_grid_10fold <- h2o.grid(
   balance_classes = FALSE                                             
 )
 
-grid.tree.10fold <- h2o.getGrid("tree_grid_10fold", sort_by = "auc", decreasing = TRUE) #check if this is validation AUC
+grid.tree.10fold <- h2o.getGrid("tree_grid_10fold", sort_by = "auc", decreasing = TRUE)
 
 model.ids.tree.10fold <- grid.tree.10fold@model_ids
 best.model.tree.10fold <- h2o.getModel(model.ids.tree.10fold[[1]])
@@ -167,10 +171,10 @@ colnames(rf.out) <- c("metric")
 rf.out <- format(rf.out, scientific=F)
 
 #output random forest model summary
-write.csv(rf.out,file=args[6])
+write.csv(rf.out,file=args[8])
 
 #output random forest parameter important values
-write.csv(tree.10fold.var.imp,file=args[7])
+write.csv(tree.10fold.var.imp,file=args[9])
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -208,25 +212,25 @@ colnames(test.out) <- c("metric")
 test.out <- format(test.out, scientific=F)
 
 #output metrics on testing set
-write.csv(as.data.frame(score.matrix), file=args[8])
-write.csv(as.data.frame(confusion.matrix), file=args[9])
-write.csv(test.out,file=args[10])
+write.csv(as.data.frame(score.matrix), file=args[10])
+write.csv(as.data.frame(confusion.matrix), file=args[11])
+write.csv(test.out,file=args[12])
 
 
 #output roc plot from testing set
-ggsave(file=,args[11], roc_plot)
+ggsave(file=,args[13], roc_plot)
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-### Stop 2 stop
+#Stop 2 stop
 
-stop2stop<-read.csv(args[3], header=TRUE)
+stop2stop<-read.csv(args[5], header=TRUE)
 
 #rownames after filter
 rownames(stop2stop) <- stop2stop[, 1]
 stop2stop <- stop2stop[,-1]
 stop2stop[,13:53] <- lapply(stop2stop[,13:53] , factor)
-stop2stop[,54:ncol(pos.raw)] <- lapply(stop2stop[,54:ncol(pos.raw)] , as.numeric)
+stop2stop[,54:ncol(training.pos.raw)] <- lapply(stop2stop[,54:ncol(training.pos.raw)] , as.numeric)
 
 stop2stop$y=as.factor(stop2stop$annotated_start_site)
 levels(stop2stop$y) =c('neg','pos')
@@ -241,7 +245,7 @@ stop2stop$pred_pos   <- as.data.frame(stop2stop.RF.10fold$pos)[,1]
 stop2stop$pred_pos<-format(stop2stop$pred_pos, scientific = FALSE)
 
 #write predictions
-write.csv(stop2stop,file=args[12])
+write.csv(stop2stop,file=args[14])
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

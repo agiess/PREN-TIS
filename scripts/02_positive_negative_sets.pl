@@ -1,16 +1,19 @@
 #!/usr/bin/perl -w
 use strict;
 
-#21/11/2017
+#07/12/2017
 #script to take a matrix of genomic positions and an optional bed file of supported start sites (for example N-terminal proteomics)
 #assign codons to neative and positive sets
 #take the 50% highest genes by cds expression in the positive set (exluding positions that will later be used for validation)
-#take a dandonly selected negative set of 4 times the number of positive examples (exluding poitions that will later be used for validation)
+#take a randonly selected negative set of 4 times the number of positive examples (exluding poitions that will later be used for validation)
 
 my $matrix=$ARGV[0];
-my $out_positive=$ARGV[1]; #Start codons from upper 50% of genes by expression,
-my $out_negative=$ARGV[2]; #Inframe non-start codons
-my $bed_file=$ARGV[3];     #validated start sites (optional)
+my $out_train_positive=$ARGV[1]; #Start codons from upper 50% of genes by expression,
+my $out_train_negative=$ARGV[2]; #Inframe non-start codons
+my $out_test_positive=$ARGV[3];  #Start codons from upper 50% of genes by expression,
+my $out_test_negative=$ARGV[4];  #Inframe non-start codons
+my $proportion=$ARGV[5];         #the proportion of the 50% highest genes to select for positives
+my $bed_file=$ARGV[6];           #validated start sites (optional)
 
 ###################################################################################################
 my %n_term_fwd; #key=chr, key=start_position, value=count
@@ -33,10 +36,10 @@ if ($bed_file){
             #assign to metaplots 
             if ($dir eq "+"){                         #fwd cases
                 #five_prime=$start;
-                $n_term_fwd{$chr}{$start}+=$count;            
+                $n_term_fwd{$chr}{$start}=1;            
             }else{                                    #reverse cases
                 #five_prime=$stop;
-                 $n_term_rev{$chr}{$stop}+=$count;
+                 $n_term_rev{$chr}{$stop}=1;
             }
 		}
     }                    
@@ -78,7 +81,6 @@ while (<MAT>){
         my $start_codon=$l[4];
         my $fpkm=$l[12]; 
 
-#		my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)$/;     
         my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)/;
  
         #start codons
@@ -122,7 +124,7 @@ close(MAT);
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #find median expression from start codons
 my $median_exp=0;
-my $size=$#start_FPKM;
+my $size=@start_FPKM;
 my $count=0;
 for my $ORF (sort {$a <=> $b} @start_FPKM){
 	$count++;
@@ -132,57 +134,109 @@ for my $ORF (sort {$a <=> $b} @start_FPKM){
 	}
 }
 
-print "Number of genes = $size, median gene FPKM = $median_exp\n";
-my $sizeUn=$#start_random; 
-my $sizeSu=$#start_supported; 
+print "There are $size genes\n";
+print "The median expression value is $median_exp FPKM\n";
+print "proprtion of highly expressed genes to select is $proportion\n";
+
+my $positive_train=int((($size/2)*$proportion)*0.8);
+my $positive_test=int((($size/2)*$proportion)*0.2);
+
+print "there will be $positive_train annotated start codons used for model training\n";
+print "there will be $positive_test annotated start codons used for model testing\n";
 
 if ($bed_file){
+    my $sizeUn=@start_random;
+    my $sizeSu=@start_supported;
+
     print "There are $sizeUn unsupported start codons\n";
     print "There are $sizeSu supporterd start codons\n";
+
+    #check if there are enough highly expressed start codons after exlcuding validated positions
+    if ((($size/2)-$sizeSu) < ($positive_train+$positive_test) ){
+        print "there are not enough positive examples after exluding validated positions, either use a smaller validation set or lower proportion of highly expressed genes\n";
+        exit 1;
+    }
 }
+
+#set seed
+srand(774);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #select all start codons from the upper 50% of genes by expression, without N-termini support
-my @positive;
-for my $line (@start_random){
-    my @position=split(",",$line);
+my @positive_train;
+my @positive_test;
+my $size1=0;
+
+while ($size1 < ($positive_train+$positive_test)){
+
+    my $index = rand @start_random;
+    my @position=split(",",$start_random[$index]);
     if ($position[12] >= $median_exp){ #filter on median expression
-    	push @positive, $line;
+        if ($size1 < $positive_train){
+            push (@positive_train, splice @start_random, $index, 1);
+        }else{
+            push (@positive_test, splice @start_random, $index, 1);
+        }
+        $size1++;
     }
 }
-my $pos_size=$#positive;
+
+#my $pos_train_size=$#positive_train;
+#my $pos_test_size=$#positive_test;
+my $pos_train_size=@positive_train;
+my $pos_test_size=@positive_test;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#The negative set should havev4 times the number of positive examples
-my @negative;
+#The negative sets should have 4 times the number of positive examples
+my @negative_train;
+my @negative_test;
 my $size2=0;
-while ($size2 < ($pos_size*4) ){
+while ($size2 < (($positive_train+$positive_test)*4)){
  
-    #get element
     my $index = rand @not_start;
-    push (@negative, splice @not_start, $index, 1);
+    if ($size2 < ($positive_train*4)){
+       push (@negative_train, splice @not_start, $index, 1);
+    }else{
+       push (@negative_test, splice @not_start, $index, 1);
+    }
     $size2++;
 }
-my $neg_size=$#negative;
+
+my $neg_train_size=@negative_train;
+my $neg_test_size=@negative_test;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #output
-open (OUT1,">$out_positive")  || die "can't open $out_positive\n";
-open (OUT2,">$out_negative")  || die "can't open $out_negative\n";
+open (OUT1,">$out_train_positive")  || die "can't open $out_train_positive\n";
+open (OUT2,">$out_train_negative")  || die "can't open $out_train_negative\n";
+open (OUT3,">$out_test_positive")  || die "can't open $out_test_positive\n";
+open (OUT4,">$out_test_negative")  || die "can't open $out_test_negative\n";
 
 #headers
 print OUT1 $header;
 print OUT2 $header;
+print OUT3 $header;
+print OUT4 $header;
 
-for (@positive){
+for (@positive_train){
     print OUT1 $_;
 }
 
-for (@negative){
+for (@negative_train){
     print OUT2 $_;
 }
 
-print "There are $pos_size positions in the positive training set\n";
-print "There are $neg_size positions in the negative training set\n";
+for (@positive_test){
+    print OUT3 $_;
+}
+
+for (@negative_test){
+    print OUT4 $_;
+}
+
+print "There are $pos_train_size positions in the positive training set\n";
+print "There are $neg_train_size positions in the negative training set\n";
+print "There are $pos_test_size positions in the positive testing set\n";
+print "There are $neg_test_size positions in the negative testing set\n";
 
 exit;

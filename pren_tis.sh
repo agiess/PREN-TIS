@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#AG 03/12/17
+#AG 07/12/17
 #script to run TIS predictions 
 #1 Bam to Sam
 #2 Matrix of stop to stop regions
@@ -17,22 +17,28 @@ usage: $0 options
 wrapper to translation initiation site prediction scripts 
 
 OPTIONS:
-    -b  bam file of aligned ribo-seq reads
-    -g  genome gtf file
-    -f  genome fasta file
-    -e  flag for eukaryotic samples (defaults to prokaryotic)
-    -v  validated open reading frames in bed format (optional)
-    -o  output directory
-    -i  minimum ribo-seq read length (optional)
-    -a  maximum ribo-seq read length (optional)
-    -h  this help message
 
-example usage: bash prentis.sh -b <riboseq.aligned.bam> -g <genome.gtf> -f <genome.fa> -v <validated_ORFs.bed> -o <output_dir>
+    required:
+    -b  <file.bam>                 bam file of aligned ribo-seq reads
+    -g  <genome.gtf>               genome gtf file
+    -f  <genome.fasta>             genome fasta file
+    -o  <directory>                output directory
+
+    optional:
+    -v  <file.bed>                 validated open reading frames in bed format
+    -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
+    -p  <number between 0 and 1>   the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
+    -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
+    -i  <number>                   minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
+    -a  <number>                   maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)
+    -h  No argument                this help message
+
+example usage: bash pren_tis.sh -b <riboseq.aligned.bam> -g <genome.gtf> -f <genome.fa> -v <validated_ORFs.bed> -o <output_dir>
 
 EOF
 }
 
-while getopts ":b:g:f:i:a:o:ev:h" opt; do
+while getopts ":b:g:f:i:a:o:v:p:et:h" opt; do
     case $opt in
         b)
             input_bam=$OPTARG
@@ -61,6 +67,14 @@ while getopts ":b:g:f:i:a:o:ev:h" opt; do
         v) 
             validation_bed=$OPTARG
             echo "-v validated regions in bed format $OPTARG"
+            ;;
+        p)  
+            proportion_of_high_genes=$OPTARG
+            echo "-p use $OPTARG of the 50% most highly expressed genes as positive examples"
+            ;;
+        t)  
+            threads=$OPTARG
+            echo "-t use $OPTARG threads for model training and predictions"
             ;;
         e)
             eukaryotic=1    
@@ -104,6 +118,33 @@ if [ ! -d $out_dir ]; then
     exit 1
 fi
 
+#set default values
+if [ ! $threads ]; then
+   threads=1
+fi 
+
+if [ ! $proportion_of_high_genes ]; then
+
+    if [ $eukaryotic ]; then
+        proportion_of_high_genes=0.1
+    else
+        proportion_of_high_genes=1.0
+    fi
+
+else 
+
+   if (( $proportion_of_high_genes < 0 )) || (( $proportion_of_high_genes > 1 )); then 
+
+       echo "ERROR: -p must be between zero and 1"
+       exit 1
+ 
+   fi
+
+fi
+
+echo "-t use $threads threads for model training and predictions"
+echo "-p use $proportion_of_high_genes of the 50% most highly expressed genes as positive examples"
+
 name=$(basename $input_bam)
 prefix=${name%.bam}
 echo $prefix
@@ -116,7 +157,7 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-#/net/apps/cbu/src/samtools-1.2/samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+/net/apps/cbu/src/samtools-1.2/samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 #samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
@@ -125,23 +166,19 @@ fi
 
 if [ $eukaryotic ]; then
 
-    echo "part2 eukaryotic"
-
-#   if [ $minimum_length ] && [ $maximum_length ]; then
-#        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
-#    else
-#        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
-#    fi
+    if [ $minimum_length ] && [ $maximum_length ]; then
+        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+    else
+        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+    fi
 
 else
 
-    echo "part2 prokaryotic"
-
-#    if [ $minimum_length ] && [ $maximum_length ]; then
-#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
-#    else
-#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
-#    fi
+    if [ $minimum_length ] && [ $maximum_length ]; then
+        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+    else
+        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+    fi
 
 fi
 
@@ -149,11 +186,20 @@ fi
 #3 Select positive and negative examples
 #------------------------------------------------------------------------------------------
 
-#if [ $validation_bed ]; then
-#    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv $validation_bed
-#else
-#    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv
-#fi
+if [ $validation_bed ]; then
+
+    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_gene $validation_bed
+
+    if [ $? != 0 ] ; then
+        echo "An error ocured in selection of the positive and negative sets"
+        exit 1;
+    fi
+
+else
+
+    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes
+
+fi
 
 #------------------------------------------------------------------------------------------
 #4 Train models and make predictions
@@ -163,19 +209,7 @@ if [ ! -d ${out_dir}/model_metrics ]; then
     mkdir ${out_dir}/model_metrics
 fi
 
-if [ $eukaryotic ]; then
-
-    echo "part4 eukaryotic"
-
-    Rscript scripts_eukaryotic/03_run_models_euk.R ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv
-
-else
-
-    echo "part4 prokaryotic"
-
-	Rscript scripts/03_run_models.R ${out_dir}/${prefix}_positive.csv ${out_dir}/${prefix}_negative.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv
-
-fi
+Rscript scripts/03_run_models.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads
 
 #process GLM coefficients
 perl scripts/03_variable_importance_matrix_GLM.pl ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv
@@ -192,15 +226,11 @@ Rscript scripts/03_plot_variables.R ${out_dir}/model_metrics/${prefix}_training_
 
 if [ $eukaryotic ]; then
 
-    echo "part5 eukaryotic"
-
-#   perl scripts_eukaryotic/04_summarise_predictions_euk.pl $genome_gtf $genome_fasta ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
+    perl scripts_eukaryotic/04_summarise_predictions_euk.pl $genome_gtf $genome_fasta ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
 
 else
 
-   echo "part5 prokaryotic"
-
-#  perl scripts/04_summarise_predictions.pl $genome_gtf $genome_fasta ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
+    perl scripts/04_summarise_predictions.pl $genome_gtf $genome_fasta ${out_dir}/${prefix}_ORF_predictions.bed ${out_dir}/${prefix}_stop2stop_predictions.csv
 
 fi
 
@@ -216,16 +246,12 @@ if [ $validation_bed ]; then
 
     if [ $eukaryotic ]; then
 
-       echo "part6 eukaryotic"
-
-#       perl scripts_eukaryotic/05_prediction_validation_euk.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
+       perl scripts_eukaryotic/05_prediction_validation_euk.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
 
     else
 
-       echo "part5 prokaryotic"
+       perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt 
 
-#       perl scripts/05_prediction_validation.pl $genome_gtf $genome_fasta $validation_bed ${out_dir}/${prefix}_ORF_predictions.bed > ${out_dir}/validation_metrics/${prefix}_performance_on_validated_TIS.txt
-    
     fi
 
 fi
@@ -234,4 +260,4 @@ fi
 #7 Tidy up
 #------------------------------------------------------------------------------------------
 
-#rm ${out_dir}/tmp/${prefix}.sam
+rm ${out_dir}/tmp/${prefix}.sam

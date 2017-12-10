@@ -193,7 +193,7 @@ for my $gene (keys %gene_exons_rev){
             #           447087 447794 <-start(+1)
             # end(-1)-> 446060 446254
 
-            while ($exon_start > $exon_end){
+            while ($exon_start >= $exon_end){
                 $gene_model_rev{$gene}{$model_pos}=$exon_start;
 
                 if ($exon_start == $gene_stop_codon_rev{$gene}){
@@ -353,14 +353,14 @@ for my $gene (keys %gene_keeper){
 
             if ($gene_model_fwd{$GENE}{$model_pos} == $POS){ #the predeicted ORF starts here
                 if ($model_pos == $start_coord){
-                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\tAnnotated\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\t0,204,0\n";
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tAnnotated\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t0,204,0\n";
                     $ano++;                    
                 }
                 elsif($model_pos > $start_coord){
-                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\tTruncation\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\t160,160,160\n";
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tTruncation\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t160,160,160\n";
                     $tru++;
                 }else{
-                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\tExtension\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t$gene_model_fwd{$GENE}{$stop_coord}\t225,218,0\n";
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tExtension\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t225,218,0\n";
                     $elo++;      
                 }
                 $search=0;
@@ -384,13 +384,13 @@ for my $gene (keys %gene_keeper){
             if ($gene_model_rev{$GENE}{$model_pos} == $POS){ #the predicted ORF starts here
 
                 if ($model_pos == $start_coord){
-                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\tAnnotated\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\t0,204,0\n";
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tAnnotated\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t0,204,0\n";
                     $ano++;
                 }elsif($model_pos > $start_coord){
-                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\tTruncation\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\t160,160,160\n";
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tTruncation\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t160,160,160\n";
                     $tru++;
                 }else{
-                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\tExtension\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-1)."\t$gene_model_rev{$GENE}{$model_pos}\t225,218,0\n";
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tExtension\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t225,218,0\n";
                     $elo++;
                 }
                 $search=0;

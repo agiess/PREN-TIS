@@ -26,10 +26,12 @@ OPTIONS:
     -g  genome gtf file
     -f  genome fasta file
     -o  output directory
-    -e  flag for eukaryotic genomes (defaults to prokaryote)
-    -v  validated translation initiation sites in bed format (optional)
-    -i  minimum ribo-seq read length (optional)
-    -a  maximum ribo-seq read length (optional)
+    -v  validated open reading frames in bed format (optional)
+    -e  flag for eukaryotic samples (defaults to prokaryotic)
+    -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes an
+    -t  number of threads for model training/prediction (defaults to 1 thread)
+    -i  minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
+    -a  maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)
     -h  this help message
 ```
 ### Example usage:
@@ -84,5 +86,7 @@ validation_metrics:
 
 ```
 When prokaryotic genomes are supplied the algorithm assumes that exon definitions in the gtf file contain stop codons.
-```
 
+We suggest choosing a value for the proportion of the most highly expressed genes such that 1000-2000 annotated TIS are in the positive set.
+
+```

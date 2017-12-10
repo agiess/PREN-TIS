@@ -7,7 +7,8 @@ library (data.table)
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #start a h2o instance
-h2o.init(nthreads = 1, max_mem_size="100g")
+#h2o.init(nthreads = 1, max_mem_size="100g")
+h2o.init(nthreads = 16, max_mem_size="200g")
 h2o.removeAll()
 
 
@@ -33,21 +34,21 @@ set.seed(9999)
 pos.ran <- pos.raw[sample(nrow(pos.raw)),]
 neg.ran <- neg.raw[sample(nrow(neg.raw)),]
 
-#count.train.pos<- nrow(pos.ran)*0.8
+count.train.pos<- nrow(pos.ran)*0.8
 #count.train.neg<- nrow(pos.ran)*0.8
-#count.train.neg<- (nrow(pos.ran)*0.8)*4
+count.train.neg<- (nrow(pos.ran)*0.8)*4
 
 #sets split 80% training, 20% testing
-#pos.train.raw <- pos.ran[1:count.train.pos,] 
-#neg.train.raw <- neg.ran[1:count.train.neg,]
-pos.train.raw <- pos.ran[1:2000,]    #80%
-neg.train.raw <- neg.ran[1:8000,]    #80%
+pos.train.raw <- pos.ran[1:count.train.pos,] 
+neg.train.raw <- neg.ran[1:count.train.neg,]
+#pos.train.raw <- pos.ran[1:2000,]    #80%
+#neg.train.raw <- neg.ran[1:8000,]    #80%
 train.raw <- rbind(pos.train.raw, neg.train.raw)
 
-#pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
-#neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
-pos.test.raw <- pos.ran[2001:2400,]  #20%
-neg.test.raw <- neg.ran[8001:9600,]  #20%
+pos.test.raw <- pos.ran[(count.train.pos+1):nrow(pos.ran),]  
+neg.test.raw <- neg.ran[(count.train.neg+1):nrow(neg.ran),]
+#pos.test.raw <- pos.ran[2001:2400,]  #20%
+#neg.test.raw <- neg.ran[8001:9600,]  #20%
 test.raw <- rbind(pos.test.raw, neg.test.raw)
 
 train.raw$y=as.factor(train.raw$annotated_start_site)
@@ -146,7 +147,7 @@ tree_grid_10fold <- h2o.grid(
   balance_classes = FALSE                                             
 )
 
-grid.tree.10fold <- h2o.getGrid("tree_grid_10fold", sort_by = "auc", decreasing = TRUE) #check if this is validation AUC
+grid.tree.10fold <- h2o.getGrid("tree_grid_10fold", sort_by = "auc", decreasing = TRUE) 
 
 model.ids.tree.10fold <- grid.tree.10fold@model_ids
 best.model.tree.10fold <- h2o.getModel(model.ids.tree.10fold[[1]])
@@ -222,7 +223,7 @@ ggsave(file=,args[11], roc_plot)
 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-### Stop 2 stop
+#Stop 2 stop
 
 stop2stop<-read.csv(args[3], header=TRUE)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 20/10/2017
+#to do 05/12/2017
 #script to take a bed file of orf predictions and to report n-termini suppoprt per prediction catagory
 #looking for exact matches only
 
@@ -10,68 +10,263 @@ my $fasta=$ARGV[1];
 my $nterm=$ARGV[2]; #bed of N-termini predictions
 my $bed=$ARGV[3];   #of predictions
 
-#for all matching, elongated or predicted
-#count the number that have n-terminal support as matching, elongated or predicted
-
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#open gtf file setup genomic hashes, to store start and stop coords per gene, per direction
-my %gene_regions_fwd_start; #old way of finding starts and ends
-my %gene_regions_fwd_stop;
-my %gene_regions_rev_start;
-my %gene_regions_rev_stop;
+#open gtf and get transcript lengths
+my %transcripts; #key = gene_id, transcript_id, #value = sum_exon_lengths;
 
-#get gene coords per direction
-my %start_codon; #key=gene_id, value=pos
-my %gene_regions_fwd; # chr, start, stop = gene 
-my %gene_regions_rev; # chr, start, stop = gene 
-
-#store gene ids
-my %gene_chr;  #gene = chr
-my %gene_fwd_start; #gene = start
-my %gene_fwd_stop ; #gene = end 
-my %gene_rev_start; #gene = start 
-my %gene_rev_stop ; #gene = end
-
-#for subroutine
-my %gene_info_fwd; #key=gene_id, key2=start, value=stop
-my %gene_info_rev; #key=gene_id, key2=start, value=stop
-
-open(GENES,$gtf) || die "can't open $gtf";        #gtf is 1 based
-while (<GENES>){
+open(GENES1,$gtf) || die "can't open $gtf";      #gft is 1 based
+while (<GENES1>){
     unless(/^#/){
         my @b=split("\t");
-        my $class=$b[2];
         my $chr=$b[0];
-        my $prim5=$b[3];
-        my $prim3=$b[4];
+        my $class=$b[2];
+        my $start=$b[3];
+        my $end=$b[4];
         my $dir=$b[6];
-        my $gene_id="unknown";
-        ($gene_id) = $b[8] =~ /gene_id\s"([^\"]+)";/;
+        my ($gene_id) = $b[8] =~ /gene_id\s"([^\"]+)";/;
+        my ($transcript_id) = $b[8] =~ /transcript_id\s"([^\"]+)";/;
 
-        #update to use cds rather than start / stop
-        if ($class eq "CDS"){
+        if ($gene_id && $transcript_id){
 
-            if ($dir eq "+"){ #use start positions as begining of feature
-                $gene_regions_fwd_start{$gene_id}=$prim5;
-                $gene_regions_fwd_stop{$chr}{$prim3}=$gene_id;
-                $gene_regions_fwd{$chr}{$prim5}{$prim3}=$gene_id;
-                $gene_fwd_start{$gene_id}=$prim5;
-                $gene_fwd_stop{$gene_id}=$prim3;
-                $gene_chr{$gene_id}=$chr;
-                $gene_info_fwd{$gene_id}{$prim5}=$prim3;
-            }else{
-                $gene_regions_rev_start{$gene_id}=$prim3;
-                $gene_regions_rev_stop{$chr}{$prim5}=$gene_id;
-                $gene_regions_rev{$chr}{$prim5}{$prim3}=$gene_id;
-                $gene_rev_start{$gene_id}=$prim5;
-                $gene_rev_stop{$gene_id}=$prim3;
-                $gene_chr{$gene_id}=$chr;
-                $gene_info_rev{$gene_id}{$prim3}=$prim5-1;
+            if ($class eq "exon"){
+                if ($dir eq "+"){
+                    for ($start .. $end){
+                        $transcripts{$gene_id}{$transcript_id}++;
+                    }
+                }else{
+                    for ($start .. $end){
+                        $transcripts{$gene_id}{$transcript_id}++;
+                    }
+                }
             }
         }
     }
 }
-close(GENES);
+close (GENES1);
+
+#select longest transcripts per gene
+my %longest_transcript; #key=gene_id, value=transcript_id
+
+for my $gene (keys %transcripts){
+    my $longest=0;
+    for my $transcript (keys %{ $transcripts{$gene}} ){
+        if ($transcripts{$gene}{$transcript} > $longest) {
+            $longest_transcript{$gene}=$transcript;
+            $longest=$transcripts{$gene}{$transcript};
+        }
+    }
+}
+
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+#second pass through the genome, find annotated start codons and setup transcript models for longest transcript of each gene
+
+my %gene_start_codon_fwd;
+my %gene_stop_codon_fwd;
+my %gene_exons_fwd;
+
+my %gene_start_codon_rev;
+my %gene_stop_codon_rev;
+my %gene_exons_rev;
+
+my %gene_2_chr; #key = gene_id; value = chr
+
+open(GENES2,$gtf) || die "can't open $gtf";      #gft is 1 based
+while (<GENES2>){
+    unless(/^#/){
+        my @b=split("\t");
+        my $chr=$b[0];
+        my $class=$b[2];
+        my $start=$b[3];
+        my $end=$b[4];
+        my $dir=$b[6];
+        my ($gene_id) = $b[8] =~ /gene_id\s"([^\"]+)";/;
+        my ($transcript_id) = $b[8] =~ /transcript_id\s"([^\"]+)";/;
+
+        if ($gene_id && $transcript_id){
+
+            #if the transcript is in the list of longest transcripts
+            if (exists ( $longest_transcript{$gene_id} )){
+
+                if ($transcript_id eq $longest_transcript{$gene_id}){
+
+                    $gene_2_chr{$gene_id}=$chr;
+
+                    if ($dir eq "+"){ #fwd cases. Use start positions as 5'
+
+                        if ($class eq "start_codon"){
+                            $gene_start_codon_fwd{$gene_id}=$start;
+                        }
+                        if ($class eq "stop_codon"){
+                            $gene_stop_codon_fwd{$gene_id}=$start;
+                        }
+                        if ($class eq "exon"){
+                            $gene_exons_fwd{$gene_id}{$start}=$end;
+                        }
+
+                    }else{ #revese cases use end as 5'
+
+                        if ($class eq "start_codon"){
+                            $gene_start_codon_rev{$gene_id}=$end;
+                        }
+                        if ($class eq "stop_codon"){
+                            $gene_stop_codon_rev{$gene_id}=$end;
+                        }
+                        if ($class eq "exon"){
+                            $gene_exons_rev{$gene_id}{$start}=$end;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+close(GENES2);
+
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+#Open fasta for codon sequeces
+
+my %fasta_sequences; #key = sequence_name, value=sequence
+my $name;
+open (FA, $fasta) || die "can't open $fasta";
+while (<FA>){
+    chomp;
+    if (/^>([^\s]+)/){ #take header up to the first space
+        $name=$1;
+        if ($name =~ /^chr(.*)/){
+           $name=$1; #if the chr name have a chr* prefix, remove it  
+        }
+    }else{
+        $fasta_sequences{$name}.=$_;
+    }
+}
+close(FA);
+
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+#assign search regions for each genes
+#If there is an annotated leader, we will extend the search region though the leader untill an inframe stop codon is found.
+
+my %stop2stop_stop_coord_fwd; #find the index of the stop codon per gene
+my %stop2stop_start_coord_fwd; #find the index of the start codon per gene
+my %stop2stop_stop_coord_rev;
+my %stop2stop_start_coord_rev;
+my %gene_model_fwd;
+
+for my $gene (keys %gene_exons_fwd){
+    if ( (exists ($gene_start_codon_fwd{$gene})) && (exists ($gene_stop_codon_fwd{$gene})) ) { #restrict to genes with annotated start + stop codon
+
+        my $model_pos=0;
+
+        for my $exon_start (sort {$a <=> $b} keys %{ $gene_exons_fwd{$gene} } ){
+            my $exon_end=$gene_exons_fwd{$gene}{$exon_start};
+
+            #fwd exons are in ascending order
+            # start(-1)-> 100958 100975
+            #             101077 101715 <-end(+1)
+
+            for ($exon_start .. $exon_end){
+                $gene_model_fwd{$gene}{$model_pos}=$_;
+
+                if ($_ == $gene_stop_codon_fwd{$gene}){
+                    $stop2stop_stop_coord_fwd{$gene}=$model_pos;    #find the index of the stop codon per gene
+                }
+
+                if ($_ == $gene_start_codon_fwd{$gene}){
+                    $stop2stop_start_coord_fwd{$gene}=$model_pos;    #find the index of the start codon per gene
+                }
+                $model_pos++;
+            }
+        }
+    }
+}
+
+my %gene_model_rev;
+
+for my $gene (keys %gene_exons_rev){
+    if ( (exists ($gene_start_codon_rev{$gene})) && (exists ($gene_stop_codon_rev{$gene})) ) { #restrict to genes with annotated start + stop codon
+
+        my $model_pos=0;
+
+        for my $exon_end (reverse (sort {$a <=> $b} keys %{ $gene_exons_rev{$gene} } )){
+            my $exon_start=$gene_exons_rev{$gene}{$exon_end};
+
+            #rev exons are sorted in decending order  
+            #           447087 447794 <-start(+1)
+            # end(-1)-> 446060 446254
+
+            while ($exon_start >= $exon_end){
+                $gene_model_rev{$gene}{$model_pos}=$exon_start;
+
+                if ($exon_start == $gene_stop_codon_rev{$gene}){
+                    $stop2stop_stop_coord_rev{$gene}=$model_pos;    #find the index of the stop codon per gene
+                }
+                if ($exon_start == $gene_start_codon_rev{$gene}){
+                    $stop2stop_start_coord_rev{$gene}=$model_pos;    #find the index of the start codon per gene
+                }
+                $model_pos++;
+                $exon_start--;
+            }
+        }
+    }
+}
+
+my %start_of_stop2stop_fwd; #parse once to find how far upstream we should go. A.K.A. the beginning of the stop2stop region
+for my $gene (keys %stop2stop_start_coord_fwd){
+
+    $start_of_stop2stop_fwd{$gene}=$stop2stop_start_coord_fwd{$gene}; #take the annotateded start codon as default.
+    my $chr=$gene_2_chr{$gene};
+    my $coord=$stop2stop_start_coord_fwd{$gene}-3;
+    my $search=1;
+
+    while ($search){
+
+        if (exists ($gene_model_fwd{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
+
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord-0)} -1), 1);     #remember the fasta sequence is zero based
+            my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+1)} -1), 1);
+            my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+2)} -1), 1);
+            my $seq=$codon1.$codon2.$codon3;
+
+            if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/){
+                $search=0;
+            }else{
+                $start_of_stop2stop_fwd{$gene}=$coord;
+            }
+            $coord=$coord-3; #go the next upstream codon.
+        }else{
+            $search=0;
+        }
+    }
+}
+
+my %start_of_stop2stop_rev;
+for my $gene (keys %stop2stop_start_coord_rev){
+
+    $start_of_stop2stop_rev{$gene}=$stop2stop_start_coord_rev{$gene}; #take the annotaed start codon as default.
+    my $chr=$gene_2_chr{$gene};
+    my $coord=$stop2stop_start_coord_rev{$gene}-3;
+    my $search=1;
+
+    while ($search){
+
+        if (exists ($gene_model_rev{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
+
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord-0) } -1) ,1); #remember the fasta sequence is zero based
+            my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+1) } -1) ,1);
+            my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+2) } -1) ,1);
+            my $seq=$codon1.$codon2.$codon3;
+            $seq=~tr/ACGTacgt/TGCAtgca/;
+
+            if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/){
+                $search=0;
+            }else{
+                $start_of_stop2stop_rev{$gene}=$coord;
+            }
+            $coord=$coord-3; #go the next upstream codon.
+        }else{
+            $search=0;
+        }
+    }
+}
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open n-termini bed
@@ -91,98 +286,122 @@ while (<PEP>){
         #assign to metaplots 
         if ($dir eq "+"){                                      #fwd cases
             #five_prime=$start;
-            $n_term_fwd{$chr}{$start}=$stop;
+            $n_term_fwd{$chr}{$stop-2}=$start; #1st nt in codon
         }else{                                                 #reverse cases
             #five_prime=$stop;
-            $n_term_rev{$chr}{$stop}=$start;
+            $n_term_rev{$chr}{$start+2}=$stop; #1st nt in codon
         }
     }
 }
 close (PEP);
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#open fasta 
-my %fasta_sequences; #key = sequence_name, value=sequence
-my $name;
-open (FA, $fasta) || die "can't open $fasta";
-while (<FA>){
-    chomp;
-    if (/^>([^\s]+)/){ #take header up to the first space
-        $name=$1;
-    }else{
-        $fasta_sequences{$name}.=$_;
-    }
-}
-close(FA);
-
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#pass hash reference to subroutine
-my ($inframe_fwd_ref, $inframe_rev_ref)=&stopToStopFromGTF( \%fasta_sequences, \%gene_info_fwd, \%gene_info_rev, \%gene_chr);
-
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#assign N-termini here
-#get a hash of genes and how they are supported
-#to dereferece (makes a new copy og the hash)
-my %inframe_fwd=%{$inframe_fwd_ref};  #gene,chr,pos=1
-my %inframe_rev=%{$inframe_rev_ref};  #gene,chr,pos=1
+#assign N-termini to genes
+my %supported_genes; #later we want to calculate on only gene with support
 my $n_sum_ano=0;
 my $n_sum_tru=0;
 my $n_sum_elo=0;
-my $n_sum_new=0;
 my %n_term_assignment_fwd; #chr, start, stop = ann/tru/elo
 my %n_term_assignment_rev; #chr, stop, start = ann/tru/elo
+my $total_TIS=0;; #count all of the potential TIS is supported genes
 
-my %supported_genes;
+for my $gene (keys %gene_model_fwd){
+    my $stop_codon_coord = $stop2stop_stop_coord_fwd{$gene};
+    my $start_codon_coord = $stop2stop_start_coord_fwd{$gene};  
+    my $stop_codon_pos = $gene_model_fwd{$gene}{ $stop_codon_coord };  
+	my $chr=$gene_2_chr{$gene};  
 
-for my $c (sort keys %n_term_fwd ){
-    for my $five (sort keys %{$n_term_fwd{$c}}){
-        my $three=$n_term_fwd{$c}{$five};
-        #check if they overlap a gene region and are in frame
-        if (exists ($inframe_fwd{$c}{$five})){
-            for my $gene (keys %{$inframe_fwd{$c}{$five}}){
-                $supported_genes{$gene}=1;
-                if ($five == $gene_fwd_start{$gene}){              #annotated
-                    $n_term_assignment_fwd{$c}{$three}{$five}="ann";
-                    $n_sum_ano++;
-                }elsif($five > $gene_fwd_start{$gene} ){           #trunaction
-                    $n_term_assignment_fwd{$c}{$three}{$five}="tru";
-                    $n_sum_tru++;
-                }elsif($five < $gene_fwd_start{$gene}){            #elongation
-                    $n_term_assignment_fwd{$c}{$three}{$five}="elo";
-                    $n_sum_elo++;
+    if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
+
+        if (exists ($n_term_fwd{$chr}{$stop_codon_pos})){  #if they share a stop codon
+            $supported_genes{$gene}=1;
+
+            my $start_codon_pos = $gene_model_fwd{$gene}{ $start_codon_coord };
+            my $nterm_start = $n_term_fwd{$chr}{$stop_codon_pos};
+
+            if ($nterm_start == $start_codon_pos){
+                $n_sum_ano++;
+                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="ann";
+            }elsif( $nterm_start < $start_codon_pos ){
+                $n_sum_tru++;
+                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="tru";
+            }else{
+                $n_sum_elo++; 
+                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="elo";
+            }
+ 
+            #I can also count potential TIS's here
+            my $search_coord=$start_of_stop2stop_fwd{$gene};
+
+            while ($search_coord < $stop_codon_coord){ #start of stop2stop region to stop codon
+ 
+                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord-0)} -1), 1);     #remember the fasta sequence is zero based
+                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord+1)} -1), 1);
+                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord+2)} -1), 1);
+                my $seq=$codon1.$codon2.$codon3;
+
+                if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
+                    $total_TIS++;
                 }
+                $search_coord+=3;
             }
         }
     }
 }
 
-for my $c (sort keys %n_term_rev ){
-    for my $five (sort keys %{$n_term_rev{$c}}){
-        my $three=$n_term_rev{$c}{$five};
-        #check if they overlap a gene region and are in frame
-        if (exists ($inframe_rev{$c}{$five})){
-            for my $gene (keys %{$inframe_rev{$c}{$five}}){
-                $supported_genes{$gene}=1;
-                if ($five == $gene_rev_stop{$gene}){               #annotated
-                    $n_term_assignment_rev{$c}{$three}{$five}="ann";
-                    $n_sum_ano++;
-                }elsif($five < $gene_rev_stop{$gene} ){            #truncation
-                    $n_term_assignment_rev{$c}{$three}{$five}="tru";
-                    $n_sum_tru++;
-                }elsif($five > $gene_rev_stop{$gene}){             #elongation                      
-                    $n_term_assignment_rev{$c}{$three}{$five}="elo";
-                    $n_sum_elo++;
+for my $gene (keys %gene_model_rev){
+    my $stop_codon_coord = $stop2stop_stop_coord_rev{$gene};
+    my $start_codon_coord = $stop2stop_start_coord_rev{$gene};
+    my $stop_codon_pos = $gene_model_rev{$gene}{ $stop_codon_coord };
+    my $chr=$gene_2_chr{$gene};
+
+    if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
+
+        if (exists ($n_term_rev{$chr}{$stop_codon_pos})){  #if they share a stop codon
+            $supported_genes{$gene}=1;
+
+            my $start_codon_pos = $gene_model_rev{$gene}{ $start_codon_coord };
+            my $nterm_start = $n_term_rev{$chr}{$stop_codon_pos};
+
+            if ($nterm_start == $start_codon_pos){
+                $n_sum_ano++;
+                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="ann";
+            }elsif( $nterm_start > $start_codon_pos ){
+                $n_sum_tru++;
+                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="tru";
+            }else{
+                $n_sum_elo++;
+                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="elo";
+            }
+
+            #I can also count poitential TIS's here
+            my $search_coord=$start_of_stop2stop_rev{$gene};
+            while ($search_coord < $stop_codon_coord){ #start of stop2stop region to stop codon
+
+                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord-0)} -1), 1);     #remember the fasta sequence is zero based
+                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord+1)} -1), 1);
+                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord+2)} -1), 1);
+                my $seq=$codon1.$codon2.$codon3;
+                $seq=~tr/ACGTacgt/TGCAtgca/;
+
+                if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
+                    $total_TIS++;
                 }
+                $search_coord+=3;
             }
         }
     }
 }
 
+##got to here
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#count potential TIS here.
-#need a list of genes with support first
-my ($total_tis)=&countTIS( \%fasta_sequences, \%gene_info_fwd, \%gene_info_rev, \%gene_chr, \%supported_genes);
 my $count_supported=keys %supported_genes;
+
+#print "matching annotation:  $n_sum_ano\n";
+#print "predicted truncation: $n_sum_tru\n";
+#print "predoicted extension: $n_sum_elo\n";
+#print "supported TIS $count_supported\n";
+#print "potential TIS $total_TIS\n";
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open bed of predictions
@@ -208,6 +427,8 @@ while (<BED>){
         if ($type eq "Truncation"){ $pred_sum_tru++; }
 
         if ($dir eq "+"){
+
+            $stop=$stop-2; #1st nt of stop codon
 
             #check if the region shares a stop codon with a peptide
             if (exists ($n_term_assignment_fwd{$chr}{$stop}) ){  
@@ -250,6 +471,7 @@ while (<BED>){
 
             #for rev, start is 3' (stop)
             #stop is 5' (start)
+            $start=$start+2;
 
             #check if the region shares a stop codon with a peptide
             if (exists ($n_term_assignment_rev{$chr}{$start} ) ){
@@ -329,13 +551,13 @@ print "tru,$pred_sum_tru,$tru_ano,$tru_elo,$tru_tru\n";
 #False -ve: Supported genes where no ORF was predicted.
 #True -ve:  All potential TIS in supported stop2stop regions, that were neither predicted nor supported.
 
-print "\nthere are $count_supported, genes with n-termnial info\n";
-print "there are $total_tis, candiate TIS in all supported genes\n";
+print "\nthere are $count_supported, genes with n-terminal info\n";
+print "there are $total_TIS, candidate TIS in all supported genes\n";
 
 my $predicted_correct=$ano_ano+$elo_elo+$tru_tru;
 my $predicted_incorrect=$ano_elo+$ano_tru+$elo_ano+$elo_tru+$tru_ano+$tru_elo;
 my $supported_not_found=$count_supported-$predicted_correct-$predicted_incorrect;
-my $correctly_rejected=$total_tis-$predicted_correct-$predicted_incorrect-$supported_not_found;
+my $correctly_rejected=$total_TIS-$predicted_correct-$predicted_incorrect-$supported_not_found;
 
 my $sensitivity=$predicted_correct/($predicted_correct+$supported_not_found);
 my $specificity=$correctly_rejected/($predicted_incorrect+$correctly_rejected);
@@ -348,194 +570,6 @@ print "false negative: $supported_not_found\n";
 
 print "\nsensitivity: $sensitivity\n";
 print "specificity: $specificity\n";
-print "positive_predicitive_value: $precision\n";
+print "positive_predictive_value: $precision\n";
 
 exit;
-
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-sub stopToStopFromGTF {
-
-    #regerences to gene and fasta hashes
-    my $fasta_ref=$_[0];
-    my $gene_info_fwd_ref=$_[1];
-    my $gene_info_rev_ref=$_[2];
-    my $gene_2_chr_ref=$_[3];
-
-    #to dereferece (makes a new copy og the hash)
-    my %gene_info_fwd=%{$gene_info_fwd_ref};
-    my %gene_info_rev=%{$gene_info_rev_ref};
-    my %gene_2_chr=%{$gene_2_chr_ref};
-
-    my %in_frame_fwd;     #chr,pos,gene,1
-    my %in_frame_rev;     #key=chr, pos, gene, value=1;
-
-    for my $gene ( keys %gene_info_fwd ) {
-        for my $annotated_start (keys %{$gene_info_fwd{$gene}}){
-
-            #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
-            my $search=1;
-            my $count=0;  #set upper limit to 1000 (100)
-            my $pos=$annotated_start-1; #-1 because of 0 based fasta offset 
-
-            while ($search){
-                $pos=$pos-3;
-
-                #check that the substing is not smaller than the chr!
-                if ($pos<0){ last; }
-
-                my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$pos,3);
-                #check for stop codon
-                if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
-                    $search=0;
-                }
-
-                if ($count>=999){ $search=0; }
-                $count++;
-            }
-
-            #also loop for cds and in frame positions
-            my $frameCount=0;
-            for ($pos+4 .. $gene_info_fwd{$gene}{$annotated_start}){
-
-                $frameCount++;
-                if ($frameCount%3 == 1){
-                    $in_frame_fwd{$gene_2_chr{$gene}}{$_}{$gene}=1;
-                }
-            }
-        }
-    }
-
-    for my $gene (keys %gene_info_rev){
-        for my $annotated_start (keys %{$gene_info_rev{$gene}}){
-
-            #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
-            my $search=1;
-            my $count=0;  #set upper limit to 1000     
-            my $pos=$annotated_start-1;
-            while ($search){ #in the upstream stop codon
-                $pos=$pos+3;
-
-                #check that the substing is not bigger or smaller than the chr!
-                if ($pos+1>length($fasta_sequences{$gene_2_chr{$gene}})){ last; }
-
-                my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
-                $seq=~tr/ACGTacgt/TGCAtgca/;
-                #check for stop codon
-                if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
-                    $search=0;
-                }
-
-               if ($count>=999){ $search=0; }
-               $count++;
-            }
-
-            #also loop for cds and in frame positions (this is the whole stop2stop region)
-            my $frameCount=0;
-            #start to end
-            for ($gene_info_rev{$gene}{$annotated_start} .. $pos-2) {
-                $frameCount++;
-                if ($frameCount%3 == 1){
-                    $in_frame_rev{$gene_2_chr{$gene}}{$_}{$gene}=1;
-                }
-            }
-        }
-    }
-    return (\%in_frame_fwd, \%in_frame_rev);
-}
-
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-sub countTIS {
-
-    #regerences to gene and fasta hashes
-    my $fasta_ref=$_[0];
-    my $gene_info_fwd_ref=$_[1];
-    my $gene_info_rev_ref=$_[2];
-    my $gene_2_chr_ref=$_[3];
-    my $gene_supp_ref=$_[4];
-
-    #to dereferece (makes a new copy og the hash)
-    my %gene_info_fwd=%{$gene_info_fwd_ref};
-    my %gene_info_rev=%{$gene_info_rev_ref};
-    my %gene_2_chr=%{$gene_2_chr_ref};
-    my %supported=%{$gene_supp_ref};
-
-    my $total_potential_TIS=0;
-
-    for my $gene ( keys %gene_info_fwd ) {
-        if (exists ($supported{$gene})){  #     #restrict to those genes with N-termnial support
-            for my $annotated_start (keys %{$gene_info_fwd{$gene}}){
-
-                #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
-                my $search=1;
-                my $count=0;  #set upper limit to 1000 (100)
-                my $pos=$annotated_start-1;
-                while ($search){  #find upstream inframe stop codon
-                    $pos=$pos-3;
-                    #check that the substing is not smaller than the chr!
-                    if ($pos<0){ last; }
-                    my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$pos,3);
-                    #check for stop codon
-                    if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
-                        $search=0;
-                    }
-                    if ($count>=999){ $search=0; }
-                    $count++;
-                }
-
-                #also loop for cds and in frame positions
-                my $frameCount=0;
-                for ($pos+4 .. $gene_info_fwd{$gene}{$annotated_start}){
-                   $frameCount++;
-                    if ($frameCount%3 == 1){
-                        #count the number of inframe near canonical positions here. 
-                        #restrict to those genes with N-termnial support
-                        my $seq=substr($fasta_sequences{$gene_2_chr{$gene}},$_,3);
-                        if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){
-                            $total_potential_TIS++;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    for my $gene (keys %gene_info_rev){
-        if (exists ($supported{$gene})){  #     #restrict to those genes with N-termnial support 
-            for my $annotated_start (keys %{$gene_info_rev{$gene}}){
-
-                #get first nucleotide of start codon then procees upstream 3nt at a time until we find a stop codon (pattern match)     
-                my $search=1; 
-                my $count=0;  #set upper limit to 1000     
-                my $pos=$annotated_start-1;
-                while ($search){ #in the upstream stop codon
-                    $pos=$pos+3;
-                    #check that the substing is not bigger or smaller than the chr! 
-                    if ($pos+1>length($fasta_sequences{$gene_2_chr{$gene}})){ last; }
-                    my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
-                    $seq=~tr/ACGTacgt/TGCAtgca/;
-                    #check for stop codon
-                    if ($seq=~/TAG/ || $seq=~/TAA/ || $seq=~/TGA/ ){
-                        $search=0;
-                    }
-                    if ($count>=999){ $search=0; }
-                    $count++;
-                }
-
-                #also loop for cds and in frame positions (this is the whole stop2stop region)
-                my $frameCount=0;
-                #start to end
-                for ($gene_info_rev{$gene}{$annotated_start} .. $pos-2) {
-                    $frameCount++;
-                    if ($frameCount%3 == 1){
-                        my $seq=reverse(substr($fasta_sequences{$gene_2_chr{$gene}},$pos-2,3));
-                        $seq=~tr/ACGTacgt/TGCAtgca/;
-                        if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){
-                            $total_potential_TIS++;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return ($total_potential_TIS);
-}

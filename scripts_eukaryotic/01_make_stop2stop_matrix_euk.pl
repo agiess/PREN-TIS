@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 17/11/2017
+#to do 04/12/2017
 #script to produce the matrix for pca, start codon classifiaction
 #output is split into lengths.
 #for each gene look upstream of the start codon to find the next in frame stop codon
@@ -255,9 +255,8 @@ print "sam parsed\n";
 
 my %stop2stop_stop_coord_fwd; #find the index of the stop codon per gene
 my %stop2stop_start_coord_fwd; #find the index of the start codon per gene
-my %stop2stop_stop_coord_rev; #find the index of the stop codon per gene
-my %stop2stop_start_coord_rev; #find the index of the start codon per gene
-
+my %stop2stop_stop_coord_rev; 
+my %stop2stop_start_coord_rev; 
 my %gene_model_fwd;
 
 #gene_model{$gene}{1}=12345
@@ -304,13 +303,13 @@ for my $gene (keys %gene_exons_rev){
         my $model_pos=0;
 
         for my $exon_end (reverse (sort {$a <=> $b} keys %{ $gene_exons_rev{$gene} } )){
-            my $exon_start=($gene_exons_rev{$gene}{$exon_end})+1;
+            my $exon_start=$gene_exons_rev{$gene}{$exon_end};
 
             #rev exons are sorted in decending order  
             #           447087 447794 <-start(+1)
             # end(-1)-> 446060 446254
 
-            while ($exon_start > $exon_end){
+            while ($exon_start >= $exon_end){
                 $gene_model_rev{$gene}{$model_pos}=$exon_start;
 
                 if ($exon_start == $gene_stop_codon_rev{$gene}){
@@ -329,9 +328,9 @@ for my $gene (keys %gene_exons_rev){
 my %start_of_stop2stop_fwd; #parse once to find how far upstream we should go. A.K.A. the beginning of the stop2stop region
 for my $gene (keys %stop2stop_start_coord_fwd){
 
-    $start_of_stop2stop_fwd{$gene}=$stop2stop_start_coord_fwd{$gene}; #take the annotaed start codon as default.
+    $start_of_stop2stop_fwd{$gene}=$stop2stop_start_coord_fwd{$gene}; #take the annotateded start codon as default.
     my $chr=$gene_2_chr{$gene};
-    my $coord=$stop2stop_start_coord_fwd{$gene}-3;    #in some cases thre is no upstream
+    my $coord=$stop2stop_start_coord_fwd{$gene}-3; 
     my $search=1;    
 
     while ($search){
@@ -407,89 +406,89 @@ print OUT "\n";
 #loop through longest transcripts of forwards genes;
 for my $gene (sort keys %start_of_stop2stop_fwd){
 
-    #make suer that we have annotated start and stop codons for this gene
+    #make sure that we have annotated start and stop codons for this gene
     if (exists ($stop2stop_stop_coord_fwd{$gene})) {
 
         my $chr=$gene_2_chr{$gene};
         my $start_coord=$start_of_stop2stop_fwd{$gene};
+        my $start_codon_coord=$stop2stop_start_coord_fwd{$gene};
         my $stop_coord=($stop2stop_stop_coord_fwd{$gene})-3;
 
-        my $start_codon_coords=$stop2stop_start_coord_fwd{$gene};
-        my $start_codon_genomic_pos1=$gene_start_codon_fwd{$gene};
-        my $start_codon_genomic_pos2=$gene_model_fwd{$gene}{ $start_codon_coords };                   
+        if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
 
-        while ($start_coord <= $stop_coord){
+            while ($start_coord <= $stop_coord){
 
-            $start_coord+=3; #move 3nt at a time inframe with stop codons
-
-            if (($start_coord > 20) && ($start_coord < ($stop_coord-21)) ){  #stay in window bounds (and in frame)
+                $start_coord+=3; #move 3nt at a time inframe with stop codons
+ 
+                if (($start_coord > 20) && ($start_coord < ($stop_coord-21)) ){  #stay in window bounds (and in frame)
    
-                #if the codon is a near cognate, calcuate feaures
-                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+0)} -1), 1); #the fasta sequence is zero based
-                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+1)} -1), 1);
-                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+2)} -1), 1);
-                my $codon=$codon1.$codon2.$codon3;
+                    #if the codon is a near cognate, calcuate feaures
+                    my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+0)} -1), 1); #the fasta sequence is zero based
+                    my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+1)} -1), 1);
+                    my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($start_coord+2)} -1), 1);
+                    my $codon=$codon1.$codon2.$codon3;
 
-                if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ 
+                    if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){ 
 
-                    my $annotated_start_site="FALSE";
-                    my $near_cognate="TRUE";
-                    my $reads_at_pos=0;
-                    my $window_reads_downstream=0;
-                    my $window_reads_upstream=0;
-                    my $win_sum=0;
-                    my $id=$chr."_".$gene_model_fwd{$gene}{$start_coord}."_fwd_".$gene; 
+                        my $annotated_start_site="FALSE";
+                        my $near_cognate="TRUE";
+                        my $reads_at_pos=0;
+                        my $window_reads_downstream=0;
+                        my $window_reads_upstream=0;
+                        my $win_sum=0;
+                        my $id=$chr."_".$gene_model_fwd{$gene}{$start_coord}."_fwd_".$gene; 
 
-                    #check for start codon
-                    if ($start_coord == $stop2stop_start_coord_fwd{$gene}){
-                         $annotated_start_site="TRUE";
-                    }
+                        #check for start codon
+                        if ($start_coord == $stop2stop_start_coord_fwd{$gene}){
+                            $annotated_start_site="TRUE";
+                        }
 
-                    #parse all lenghts for count summaries (summmed over all fragment lengths)
-                    for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                        for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
-                            if (exists ($counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len})){
-                                $win_sum+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len};
-                                if ($win_pos==$start_coord){ $reads_at_pos+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
-                                if ($win_pos>$start_coord){ $window_reads_downstream+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
-                                if ($win_pos<$start_coord){ $window_reads_upstream+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
+                        #parse all lenghts for count summaries (summmed over all fragment lengths)
+                        for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                            for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
+                                if (exists ($counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len})){
+                                    $win_sum+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len};
+                                    if ($win_pos==$start_coord){ $reads_at_pos+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
+                                    if ($win_pos>$start_coord){ $window_reads_downstream+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
+                                    if ($win_pos<$start_coord){ $window_reads_upstream+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len}; }
+                                }
                             }
                         }
-                    }
 
-                    my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
-                    my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
-                    my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
+                        my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
+                        my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
+                        my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
-                    #fkpm + codon rank here
-                    my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$gene,$start_coord);
+                        #fpkm + codon rank here
+                        my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$gene,$start_coord);
 
-                    print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
-
-                    my $window_seq; #for loop here for coords
-                    #Loop through sequence here
-                    #output sequence
-                    for ($start_coord-$WINDOW_START .. $start_coord+$WINDOW_END){
-                        my $nuc=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{$_}-1), 1);
-                        print OUT ",$nuc";
-                    }
-
-                    #LOOP THROUGH LENGTHS HERE
-                    for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                        #second loop for output
-                        for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
-                            my $signal=0;
-                            #riboseq signal
-                            #%counts; #key = chr, key2 = position, value = counts.
-                            if (exists ($counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len} )){
-                                $signal+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len};
-                            }
-
-                            my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;   #this is the proportion of reads per length
-                            print OUT ",$fraction_of_window_signal";
+                        print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+ 
+                        my $window_seq; #for loop here for coords
+                        #Loop through sequence here
+                        #output sequence
+                        for ($start_coord-$WINDOW_START .. $start_coord+$WINDOW_END){
+                            my $nuc=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{$_}-1), 1);
+                            print OUT ",$nuc";
                         }
+
+                        #LOOP THROUGH LENGTHS HERE
+                        for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                            #second loop for output
+                            for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
+                                my $signal=0;
+                                #riboseq signal
+                                #%counts; #key = chr, key2 = position, value = counts.
+                                if (exists ($counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len} )){
+                                    $signal+=$counts_fwd{$chr}{ $gene_model_fwd{$gene}{$win_pos} }{$len};
+                                }
+
+                                my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;   #this is the proportion of reads per length
+                                print OUT ",$fraction_of_window_signal";
+                            }
+                        }
+                        print OUT "\n";
                     }
-                    print OUT "\n";
                 }
             }
         }
@@ -499,92 +498,91 @@ for my $gene (sort keys %start_of_stop2stop_fwd){
 #loop through longest transcripts of reverse genes;
 for my $gene (sort keys %start_of_stop2stop_rev){
 
-    #make suer that we have annotated start and stop codons for this gene
-    if (exists ($stop2stop_stop_coord_rev{$gene})) {;
+    #make sure that we have annotated start and stop codons for this gene
+    if (exists ($stop2stop_stop_coord_rev{$gene})) {
 
         my $chr=$gene_2_chr{$gene};
-        my $start_coord=$start_of_stop2stop_rev{$gene};
-
+        my $start_coord=$start_of_stop2stop_rev{$gene};   
+        my $start_codon_coord=$stop2stop_start_coord_rev{$gene};
         my $stop_coord=($stop2stop_stop_coord_rev{$gene})-3;
 
-        my $start_codon_coords=$stop2stop_start_coord_rev{$gene};
-        my $start_codon_genomic_pos1=$gene_start_codon_rev{$gene};
-        my $start_codon_genomic_pos2=$gene_model_rev{$gene}{ $start_codon_coords };
+        if ($start_codon_coord > 20){ #restrict to genes with at least 20nt of 5' leader, upstream of the start codon (as we need to calculate -20/+20 feature windows)
 
-        while ($start_coord <= $stop_coord){
+            while ($start_coord <= $stop_coord){
 
-            $start_coord+=3; #move 3nt at a time inframe with stop codons
+                $start_coord+=3; #move 3nt at a time inframe with stop codons
 
-            if (($start_coord > 20) && ($start_coord < ($stop_coord-21)) ){  #stay in window bounds (and in frame)
+                if (($start_coord > 20) && ($start_coord < ($stop_coord-21)) ){  #stay in window bounds
 
-                #if the codon is a near cognate, calcuate feaures
-                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+0)} -1), 1); #the fasta sequence is zero based
-                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+1)} -1), 1);
-                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+2)} -1), 1);
-                my $codon=$codon1.$codon2.$codon3;
-                $codon=~tr/ACGTacgt/TGCAtgca/;
+                    #if the codon is a near cognate, calcuate feaures
+                    my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+0)} -1), 1); #the fasta sequence is zero based
+                    my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+1)} -1), 1);
+                    my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($start_coord+2)} -1), 1);
+                    my $codon=$codon1.$codon2.$codon3;
+                    $codon=~tr/ACGTacgt/TGCAtgca/;
 
-                if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){
+                    if ($codon =~/[ACGT]TG/ || $codon =~/A[ACGT]G/ || $codon =~/AT[ACGT]/){
                
-                    my $annotated_start_site="FALSE";
-                    my $near_cognate="TRUE";
-                    my $reads_at_pos=0;
-                    my $window_reads_downstream=0;
-                    my $window_reads_upstream=0;
-                    my $win_sum=0;
-                    my $id=$chr."_".$gene_model_rev{$gene}{$start_coord}."_rev_".$gene;
+                        my $annotated_start_site="FALSE";
+                        my $near_cognate="TRUE";
+                        my $reads_at_pos=0;
+                        my $window_reads_downstream=0;
+                        my $window_reads_upstream=0;
+                        my $win_sum=0;
+                        my $id=$chr."_".$gene_model_rev{$gene}{$start_coord}."_rev_".$gene;
 
-                    #check for start codon
-                    if ($start_coord == $stop2stop_start_coord_rev{$gene}){
-                         $annotated_start_site="TRUE";
-                    }
+                        #check for start codon
+                        if ($start_coord == $stop2stop_start_coord_rev{$gene}){
+                            $annotated_start_site="TRUE";
+                        }
 
-                    #parse all lenghts for count summaries (summmed over all fragment lengths)
-                    for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                        for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
-                            if (exists ($counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len})){
-                                $win_sum+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len};
-                                if ($win_pos==$start_coord){ $reads_at_pos+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
-                                if ($win_pos>$start_coord){ $window_reads_downstream+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
-                                if ($win_pos<$start_coord){ $window_reads_upstream+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
+                        #parse all lenghts for count summaries (summmed over all fragment lengths)
+                        for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                            for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
+                                if (exists ($counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len})){
+                                    $win_sum+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len};
+                                    if ($win_pos==$start_coord){ $reads_at_pos+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
+                                    if ($win_pos>$start_coord){ $window_reads_downstream+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
+                                    if ($win_pos<$start_coord){ $window_reads_upstream+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len}; }
+                                }
                             }
                         }
-                    }
 
-                    my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
-                    my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
-                    my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
+                        my $proportion_at_position=eval {$reads_at_pos/$win_sum} || 0;
+                        my $proportion_upstream=eval {$window_reads_upstream/$win_sum} || 0;
+                        my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
-                    #fkpm + codon rank here
-                    my ($ORF_FPKM,$codon_rank)=&stop2stop_rev($chr,$gene,$start_coord);
+                        #fpkm + codon rank here
+                        my ($ORF_FPKM,$codon_rank)=&stop2stop_rev($chr,$gene,$start_coord);
 
-                    print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                        print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
 
-                    my $window_seq; #for loop here for coords
-                    #Loop through sequence here
-                    #output sequence
-                    for ($start_coord-$WINDOW_START .. $start_coord+$WINDOW_END){
-                        my $nuc=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{$_}-1), 1);
-                        $nuc=~tr/ACGTacgt/TGCAtgca/;
-                        print OUT ",$nuc";
-                    }
-
-                    #LOOP THROUGH LENGTHS HERE
-                    for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
-                        #second loop for output
-                        for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
-                            my $signal=0;
-                            #riboseq signal
-                            #%counts; #key = chr, key2 = position, value = counts.
-                            if (exists ($counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len} )){
-                                $signal+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len};
-                            }
-
-                            my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;   #this is the proportion of reads per length
-                            print OUT ",$fraction_of_window_signal";
+                        my $window_seq; #for loop here for coords
+                        #Loop through sequence here
+                        #output sequence
+                        for ($start_coord-$WINDOW_START .. $start_coord+$WINDOW_END){
+                             my $nuc=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{$_}-1), 1);
+                             $nuc=~tr/ACGTacgt/TGCAtgca/;
+                             print OUT ",$nuc";
                         }
+
+                        #LOOP THROUGH LENGTHS HERE
+                        for my $len ($SHORTEST_FRAGMENT .. $LONGEST_FRAGMENT){
+                            #second loop for output
+                            for my $win_pos (($start_coord-$WINDOW_START) .. ($start_coord+$WINDOW_END)){
+                                my $signal=0;
+                                #riboseq signal
+                                #%counts; #key = chr, key2 = position, value = counts.
+                                if (exists ($counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len} )){
+                                    $signal+=$counts_rev{$chr}{ $gene_model_rev{$gene}{$win_pos} }{$len};
+                                }
+ 
+                                my $fraction_of_window_signal=eval {$signal/$win_sum} || 0;   #this is the proportion of reads per length
+                                print OUT ",$fraction_of_window_signal";
+                            }
+                        }
+                        print OUT "\n";
                     }
-                    print OUT "\n";
                 }
             }
         }
