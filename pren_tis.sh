@@ -134,8 +134,6 @@ if [ ! $proportion_of_high_genes ]; then
 
 else 
 
-   check_with=1.0
-
    if (( $(echo "$proportion_of_high_genes <= 0.0" | bc -l)  )) || (( $(echo "$proportion_of_high_genes > 1.0" | bc ) )); then 
 
        echo "ERROR: -p must be between zero and 1"
@@ -160,8 +158,7 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-/net/apps/cbu/bin/samtools_0.1.18 view $input_bam > ${out_dir}/tmp/${prefix}.sam
-#samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
 #2 Matrix of stop to stop regions
