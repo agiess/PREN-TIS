@@ -337,9 +337,9 @@ my $predicted_incorrect=$ano_elo+$ano_tru+$elo_ano+$elo_tru+$tru_ano+$tru_elo;
 my $supported_not_found=$count_supported-$predicted_correct-$predicted_incorrect;
 my $correctly_rejected=$total_tis-$predicted_correct-$predicted_incorrect-$supported_not_found;
 
-my $sensitivity=$predicted_correct/($predicted_correct+$supported_not_found);
-my $specificity=$correctly_rejected/($predicted_incorrect+$correctly_rejected);
-my $precision=$predicted_correct/($predicted_correct+$predicted_incorrect);
+my $sensitivity=eval{$predicted_correct/($predicted_correct+$supported_not_found)} || 0 ;
+my $specificity=eval{$correctly_rejected/($predicted_incorrect+$correctly_rejected)} || 0;
+my $precision=eval{$predicted_correct/($predicted_correct+$predicted_incorrect)} || 0;;
 
 print "\ntrue positive: $predicted_correct\n";
 print "true negative: $correctly_rejected\n";

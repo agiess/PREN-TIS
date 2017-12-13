@@ -160,7 +160,8 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+/net/apps/cbu/bin/samtools_0.1.18 view $input_bam > ${out_dir}/tmp/${prefix}.sam
+#samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
 #2 Matrix of stop to stop regions
@@ -182,7 +183,7 @@ else
         perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
     fi
 
-#fi
+fi
 
 #------------------------------------------------------------------------------------------
 #3 Select positive and negative examples

@@ -105,6 +105,7 @@ while (<MAT>){
                     $search=0;
 
                     if (exists ($stopCodonScores{$CHR}{$dir}{$pos}) ){
+ 
                         if ($pos_prob > $stopCodonScores{$CHR}{$dir}{$pos}){ #new winner
                             $stopCodonScores{$CHR}{$dir}{$pos}=$pos_prob;
                             $keepers{$CHR}{$dir}{$pos}=$row; 
@@ -150,7 +151,6 @@ for my $chr (keys %keepers){
         }
     }
 }
-print "there are $rowCount predictions, and $distinctCount distinct predictions\n"; 
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #output predicted regions in bed format, classify as tuncated, elongated or matching compared to anottated genes
@@ -291,6 +291,5 @@ for my $chrH (keys %keepers){
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#print "Counts:\n$ano\t#1 Predictions matching annotated start codons\n$tru\t#2 Predicted truncations\n$elo\t#3 Predicted extensions\n";
 
 exit;
