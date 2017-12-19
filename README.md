@@ -28,7 +28,7 @@ OPTIONS:
     -o  output directory
     -v  validated open reading frames in bed format (optional)
     -e  flag for eukaryotic samples (defaults to prokaryotic)
-    -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes an
+    -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -t  number of threads for model training/prediction (defaults to 1 thread)
     -i  minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
     -a  maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)
@@ -38,6 +38,28 @@ OPTIONS:
 
 ```
 pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <genome.fasta>
+```
+
+### Dataset for software testing
+```
+
+An example dataset has been provided for software testing. This dataset contains the ribo-seq and n-terminal peptide prediction for the pSLT plasmid, which is a subset of the Salmonella Typhimurium dataset in https://doi.org/10.1186/s12915-017-0416-0.
+
+run_test.sh will run the following command:
+
+ bash pren_tis.sh 
+-b data_for_testing/pSLT.bam 
+-g data_for_testing/pSLT.gtf 
+-f data_for_testing/pSLT.fa 
+-v data_for_testing/pSLT.nterminal.validations.bed
+-o data_for_testing/test_out/
+-n 1
+-p 1.0
+
+Which should produce the following output metrics:
+
+
+
 ```
 
 ## Algorithm

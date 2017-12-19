@@ -10,7 +10,6 @@ n.threads<-as.integer(args[15])
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #start a h2o instance
 h2o.init(nthreads = n.threads, max_mem_size="100g")
-#h2o.init(nthreads = 1, max_mem_size="100g")
 h2o.removeAll()
 
 
@@ -56,8 +55,6 @@ levels(test.raw$y) =c('neg','pos')
 train.hex <- as.h2o(train.raw, destination_frame="train.hex")
 test.hex <- as.h2o(test.raw, destination_frame = "test.hex")
 
-dim(train.hex)
-dim(test.hex)
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #h2o without parameter scaling cross validation
@@ -231,6 +228,11 @@ rownames(stop2stop) <- stop2stop[, 1]
 stop2stop <- stop2stop[,-1]
 stop2stop[,13:53] <- lapply(stop2stop[,13:53] , factor)
 stop2stop[,54:ncol(training.pos.raw)] <- lapply(stop2stop[,54:ncol(training.pos.raw)] , as.numeric)
+
+#mark the positions that were used for model training
+stop2stop$used_in_model_training <- 'no'
+common <- intersect(rownames(train.raw), rownames(stop2stop))
+stop2stop[common,]$used_in_model_training <- 'yes'
 
 stop2stop$y=as.factor(stop2stop$annotated_start_site)
 levels(stop2stop$y) =c('neg','pos')
