@@ -37,29 +37,7 @@ OPTIONS:
 ### Example usage:
 
 ```
-pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <genome.fasta>
-```
-
-### Dataset for software testing
-```
-
-An example dataset has been provided for software testing. This dataset contains the ribo-seq and n-terminal peptide prediction for the pSLT plasmid, which is a subset of the Salmonella Typhimurium dataset in https://doi.org/10.1186/s12915-017-0416-0.
-
-run_test.sh will run the following command:
-
- bash pren_tis.sh 
--b data_for_testing/pSLT.bam 
--g data_for_testing/pSLT.gtf 
--f data_for_testing/pSLT.fa 
--v data_for_testing/pSLT.nterminal.validations.bed
--o data_for_testing/test_out/
--n 1
--p 1.0
-
-Which should produce the following output metrics:
-
-
-
+bash pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <genome.fasta>
 ```
 
 ## Algorithm
