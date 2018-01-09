@@ -123,6 +123,7 @@ close(MAT);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #find median expression from start codons
+
 my $median_exp=0;
 my $size=@start_FPKM;
 my $count=0;
@@ -136,7 +137,7 @@ for my $ORF (sort {$a <=> $b} @start_FPKM){
 
 print "There are $size genes\n";
 print "The median expression value is $median_exp FPKM\n";
-print "proportion of highly expressed genes to select is $proportion\n";
+print "The proportion of highly expressed genes to select is $proportion\n";
 
 my $positive_train=int((($size/2)*$proportion)*0.8);
 my $positive_test=int((($size/2)*$proportion)*0.2);
@@ -148,6 +149,7 @@ if ($bed_file){
     print "There are $sizeUn start codons that are not supported by the validation set\n";
     print "There are $sizeSu start codons supported by the validation set\n";
 
+
     #check if there are enough highly expressed start codons after exlcuding validated positions
     if ((($size/2)-$sizeSu) < ($positive_train+$positive_test) ){
         print "there are not enough positive examples after exluding validated positions, either use a smaller validation set or lower proportion of highly expressed genes\n";
@@ -156,7 +158,7 @@ if ($bed_file){
 }
 
 #set seed
-srand(774);
+srand(7777);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #select all start codons from the upper 50% of genes by expression, without N-termini support
@@ -178,8 +180,6 @@ while ($size1 < ($positive_train+$positive_test)){
     }
 }
 
-#my $pos_train_size=$#positive_train;
-#my $pos_test_size=$#positive_test;
 my $pos_train_size=@positive_train;
 my $pos_test_size=@positive_test;
 

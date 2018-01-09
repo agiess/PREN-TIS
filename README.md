@@ -1,6 +1,6 @@
 # PREN-TIS
 
-A generalised machine learning framework to exploit experimental ribo-seq read lengths patterns for accurate genome wide identification of prokaryotic translation initiation sites.
+A generalised machine learning framework to exploit experimental ribo-seq read lengths patterns for accurate genome wide identification of translation initiation sites.
 
 ## Prerequisites
 
@@ -12,6 +12,7 @@ perl
 r
 
 r package: h2o 
+r package: dplyr
 r package: ggplot2
 r package: data.table
 ```

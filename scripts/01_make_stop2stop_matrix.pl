@@ -47,8 +47,6 @@ while (<GENES>){
 
         if ($class eq "CDS"){ #reworked to account for gtf's without start/stop codons
 
-            #using CDS can be problematic because a few genes are multiexonic
-
             if ($dir eq "+"){ #fwd cases. Use start positions as 5'
 
      #           #fwd genes take start stop from first exons.

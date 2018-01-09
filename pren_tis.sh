@@ -158,29 +158,29 @@ fi
 #1 Bam to sam
 #------------------------------------------------------------------------------------------
 
-samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
+#samtools view $input_bam > ${out_dir}/tmp/${prefix}.sam
 	
 #------------------------------------------------------------------------------------------
 #2 Matrix of stop to stop regions
 #------------------------------------------------------------------------------------------
 
-if [ $eukaryotic ]; then
+#if [ $eukaryotic ]; then
 
-    if [ $minimum_length ] && [ $maximum_length ]; then
-        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
-    else
-        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
-    fi
+#    if [ $minimum_length ] && [ $maximum_length ]; then
+#        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+#    else
+#        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+#    fi
 
-else
+#else
 
-    if [ $minimum_length ] && [ $maximum_length ]; then
-        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
-    else
-        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
-    fi
+#    if [ $minimum_length ] && [ $maximum_length ]; then
+#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+#    else
+#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+#    fi
 
-fi
+#fi
 
 #------------------------------------------------------------------------------------------
 #3 Select positive and negative examples

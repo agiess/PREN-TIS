@@ -122,7 +122,7 @@ write.csv(sorted.10fold, file=args[7])
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #run models
 
-hyper_params = list( ntrees = seq(100, 1000,100) )
+hyper_params = list( ntrees = seq(100, 1000, 100) )
 
 #tidy up the factor names from the glm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)
