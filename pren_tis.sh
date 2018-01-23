@@ -74,11 +74,9 @@ while getopts ":b:g:f:i:a:o:v:p:et:h" opt; do
             ;;
         p)  
             proportion_of_high_genes=$OPTARG
-            #echo "-p use $OPTARG of the 50% most highly expressed genes as positive examples"
             ;;
         t)  
             threads=$OPTARG
-            #echo "-t use $OPTARG threads for model training and predictions"
             ;;
         h)
             usage
@@ -165,7 +163,7 @@ fi
 #------------------------------------------------------------------------------------------
 
 #if [ $eukaryotic ]; then
-
+#
 #    if [ $minimum_length ] && [ $maximum_length ]; then
 #        perl scripts_eukaryotic/01_make_stop2stop_matrix_euk.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
 #    else
@@ -175,31 +173,35 @@ fi
 #else
 
 #    if [ $minimum_length ] && [ $maximum_length ]; then
-#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+#        perl scripts/01_make_stop2stop_matrix_v3.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+#        #perl scripts/01_make_stop2stop_matrix_v2.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
+#        #perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv $minimum_length $maximum_length
 #    else
-#        perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+#        perl scripts/01_make_stop2stop_matrix_v3.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+#        #perl scripts/01_make_stop2stop_matrix_v2.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
+#        #perl scripts/01_make_stop2stop_matrix.pl $genome_gtf ${out_dir}/tmp/${prefix}.sam $genome_fasta ${out_dir}/${prefix}_stop2stop.csv
 #    fi
-
+#
 #fi
 
 #------------------------------------------------------------------------------------------
 #3 Select positive and negative examples
 #------------------------------------------------------------------------------------------
 
-if [ $validation_bed ]; then
+#if [ $validation_bed ]; then
 
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $validation_bed
+#    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $validation_bed
 
-    if [ $? != 0 ] ; then
-        echo "An error ocured in selection of the positive and negative sets"
-        exit 1;
-    fi
+#    if [ $? != 0 ] ; then
+#        echo "An error ocured in selection of the positive and negative sets"
+#        exit 1;
+#    fi
 
-else
+#else
 
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes
+#    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes
 
-fi
+#fi
 
 #------------------------------------------------------------------------------------------
 #4 Train models and make predictions
@@ -260,4 +262,4 @@ fi
 #7 Tidy up
 #------------------------------------------------------------------------------------------
 
-rm ${out_dir}/tmp/${prefix}.sam
+#rm ${out_dir}/tmp/${prefix}.sam

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 05/01/2018
+#to do 09/01/2018
 #script to take a bed file of orf predictions and to report n-termini suppoprt per prediction catagory
 #looking for exact matches only
 
@@ -9,19 +9,6 @@ my $gtf=$ARGV[0];
 my $fasta=$ARGV[1]; 
 my $nterm=$ARGV[2]; #bed of N-termini predictions
 my $pred=$ARGV[3];  #bed of predictions
-
-
-#reworking
-
-
-#1) Store the start positions of n-terminal peptides
-#2) Extend n-terminal peptides to downstream in frame stop codons
-#3) Store stop positions of N-terminal supported ORFs
-#4) Open genes find those that share stop codons with N-terminal peptides
-#5) Caclulate the number of potential start codons in the stop to stop regions
-#6) Open predicted bed, count those that aggree with N-terminal support and those that dissagree
-#7)     Also track how they compare to the genes
-
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open fasta 
@@ -61,12 +48,10 @@ while (<PEP>){
             #five_prime=$start;
             my $stop_position=&closest_inframe_downstream_stop_codon_fwd($chr,$start);
             $n_term_fwd{$chr}{$stop_position}=$start;
-#            print "$chr,+,$start,$stop_position\n";
         }else{                                                 #reverse cases
             #five_prime=$stop;
             my $stop_position=&closest_inframe_downstream_stop_codon_rev($chr,$stop);
             $n_term_rev{$chr}{$stop_position}=$stop;
-#            print "$chr,-,$stop,$stop_position\n";
         }
     }
 }
@@ -166,7 +151,6 @@ my $positive_annotated=0;
 my $positive_truncated=0;
 my $positive_extended=0;
 
-
 open (PRED, $pred) || die "can't open $pred";      #bed is O based at start, 1 based at end
 while (<PRED>){
     unless (/^track/){  #skip header
@@ -191,7 +175,8 @@ while (<PRED>){
 
                     if ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Annotated"){ $positive_annotated++; 
                     }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Truncated"){ $positive_truncated++;   
-                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Extended"){ $positive_extended++;   }
+                        print "$chr,$start,$stop\n";
+                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Extended"){ $positive_extended++; }
     
                 }else{
                     $false_positive++;
@@ -212,7 +197,8 @@ while (<PRED>){
 
                     if ($N_terminal_assingment_rev{$chr}{$start+2} eq "Annotated"){ $positive_annotated++;
                     }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Truncated"){ $positive_truncated++;                
-                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Extended"){ $positive_extended++;   }
+                        print "$chr,$start,$stop\n";
+                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Extended"){ $positive_extended++; }
 
                 }else{
                     $false_positive++;

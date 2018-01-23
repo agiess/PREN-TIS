@@ -23,27 +23,50 @@ testing.neg.raw<-read.csv(args[4], header=TRUE)
 rownames(training.pos.raw) <- training.pos.raw[, 1]
 training.pos.raw <- training.pos.raw[,-1]
 training.pos.raw$seq_1[training.pos.raw$seq_1 == TRUE] <-"T"
-training.pos.raw[,13:53] <- lapply(training.pos.raw[,13:53] , factor)
-training.pos.raw[,54:ncol(training.pos.raw)] <- lapply(training.pos.raw[,54:ncol(training.pos.raw)] , as.numeric)
+#training.pos.raw[,13:53] <- lapply(training.pos.raw[,13:53] , factor)
+#training.pos.raw[,54:ncol(training.pos.raw)] <- lapply(training.pos.raw[,54:ncol(training.pos.raw)] , as.numeric)
+training.pos.raw[,22:62] <- lapply(training.pos.raw[,22:62] , factor)
+training.pos.raw[,63:ncol(training.pos.raw)] <- lapply(training.pos.raw[,63:ncol(training.pos.raw)] , as.numeric)
 
 rownames(training.neg.raw) <- training.neg.raw[, 1]
 training.neg.raw <- training.neg.raw[,-1]
 training.neg.raw$seq_1[training.neg.raw$seq_1 == TRUE] <-"T"
-training.neg.raw[,13:53] <- lapply(training.neg.raw[,13:53] , factor)
-training.neg.raw[,54:ncol(training.pos.raw)] <- lapply(training.neg.raw[,54:ncol(training.pos.raw)] , as.numeric)
+#training.neg.raw[,13:53] <- lapply(training.neg.raw[,13:53] , factor)
+#training.neg.raw[,54:ncol(training.pos.raw)] <- lapply(training.neg.raw[,54:ncol(training.pos.raw)] , as.numeric)
+training.neg.raw[,22:62] <- lapply(training.neg.raw[,22:62] , factor)
+training.neg.raw[,63:ncol(training.pos.raw)] <- lapply(training.neg.raw[,63:ncol(training.pos.raw)] , as.numeric)
 
 rownames(testing.pos.raw) <- testing.pos.raw[, 1]
 testing.pos.raw <- testing.pos.raw[,-1]
 testing.pos.raw$seq_1[testing.pos.raw$seq_1 == TRUE] <-"T"
-testing.pos.raw[,13:53] <- lapply(testing.pos.raw[,13:53] , factor)
-testing.pos.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.pos.raw[,54:ncol(testing.pos.raw)] , as.numeric)
+#testing.pos.raw[,13:53] <- lapply(testing.pos.raw[,13:53] , factor)
+#testing.pos.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.pos.raw[,54:ncol(testing.pos.raw)] , as.numeric)
+testing.pos.raw[,22:62] <- lapply(testing.pos.raw[,22:62] , factor)
+testing.pos.raw[,63:ncol(testing.pos.raw)] <- lapply(testing.pos.raw[,63:ncol(testing.pos.raw)] , as.numeric)
 
 rownames(testing.neg.raw) <- testing.neg.raw[, 1]
 testing.neg.raw <- testing.neg.raw[,-1]
 testing.neg.raw$seq_1[testing.neg.raw$seq_1 == TRUE] <-"T"
-testing.neg.raw[,13:53] <- lapply(testing.neg.raw[,13:53] , factor)
-testing.neg.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.neg.raw[,54:ncol(testing.pos.raw)] , as.numeric)
+#testing.neg.raw[,13:53] <- lapply(testing.neg.raw[,13:53] , factor)
+#testing.neg.raw[,54:ncol(testing.pos.raw)] <- lapply(testing.neg.raw[,54:ncol(testing.pos.raw)] , as.numeric)
+testing.neg.raw[,22:62] <- lapply(testing.neg.raw[,22:62] , factor)
+testing.neg.raw[,63:ncol(testing.pos.raw)] <- lapply(testing.neg.raw[,63:ncol(testing.pos.raw)] , as.numeric)
 
+#downsample negative set to equal positive
+#set.seed(9999)
+#testing.neg.ran <- testing.neg.raw[sample(nrow(testing.pos.raw)),]
+#training.neg.ran <- training.neg.raw[sample(nrow(training.pos.raw)),]
+#train.raw <- rbind(training.pos.raw, training.neg.ran)
+#test.raw <- rbind(testing.pos.raw, testing.neg.ran)
+
+#oversample positive set to equal negative
+#set.seed(9999)
+#testing.pos.ran <- testing.pos.raw[sample(nrow(testing.neg.raw), replace=TRUE),]
+#training.pos.ran <- training.pos.raw[sample(nrow(training.neg.raw), replace=TRUE),]
+#train.raw <- rbind(training.pos.ran, training.neg.raw)
+#test.raw <- rbind(testing.pos.ran, testing.neg.raw)
+
+#regular method
 train.raw <- rbind(training.pos.raw, training.neg.raw) 
 test.raw <- rbind(testing.pos.raw, testing.neg.raw)
 
@@ -60,6 +83,8 @@ test.hex <- as.h2o(test.raw, destination_frame = "test.hex")
 #h2o without parameter scaling cross validation
 
 alpha_opts = list(list(0), list(.2), list(.4), list(.6), list(.8), list(1))
+#alpha_opts = list(list(0), list(0.1), list(0.2), list(0.3), list(0.4), list(0.5), list(0.6), list(0.7), list(0.8), list(0.9), list(1))
+
 hyper_parameters = list(alpha = alpha_opts)
 
 grid.10fold <- h2o.grid(
@@ -68,14 +93,17 @@ grid.10fold <- h2o.grid(
   family = "binomial",
   hyper_params = hyper_parameters, 
   y = ncol(train.hex),
-  x = c(1, 3, 9:32, 36:(ncol(train.hex-1)) ),
+  #x = c(1, 9:32, 36:(ncol(train.hex-1)) ), #remove codon_count #3
+  x = c(1, 3:12, 18:41, 45:(ncol(train.hex-1)) ), 
+  #x = c(1, 3, 9:32, 36:(ncol(train.hex-1)) ),
   training_frame = train.hex, 
   standardize = TRUE,
   intercept = FALSE,
   lambda_search = TRUE, 
   nfolds=10,
   seed = 7777777,
-  balance_classes = FALSE      
+  balance_classes = FALSE
+#  balance_classes = TRUE      
 )
 
 grid.models.10fold <- lapply(grid.10fold@model_ids, function(model_id) { model = h2o.getModel(model_id) })
@@ -123,6 +151,7 @@ write.csv(sorted.10fold, file=args[7])
 #run models
 
 hyper_params = list( ntrees = seq(100, 1000, 100) )
+#hyper_params = list( ntrees = seq(100, 2000, 100) )
 
 #tidy up the factor names from the glm so that they match the original column names 
 tidy1 <- gsub("(codon).*", "\\1", selected.10fold)
@@ -141,6 +170,7 @@ tree_grid_10fold <- h2o.grid(
   nfolds=10,
   seed = 7777777,                                                             
   balance_classes = FALSE                                             
+#  balance_classes = TRUE
 )
 
 grid.tree.10fold <- h2o.getGrid("tree_grid_10fold", sort_by = "auc", decreasing = TRUE)
@@ -226,8 +256,10 @@ stop2stop<-read.csv(args[5], header=TRUE)
 #rownames after filter
 rownames(stop2stop) <- stop2stop[, 1]
 stop2stop <- stop2stop[,-1]
-stop2stop[,13:53] <- lapply(stop2stop[,13:53] , factor)
-stop2stop[,54:ncol(training.pos.raw)] <- lapply(stop2stop[,54:ncol(training.pos.raw)] , as.numeric)
+#stop2stop[,13:53] <- lapply(stop2stop[,13:53] , factor)
+#stop2stop[,54:ncol(training.pos.raw)] <- lapply(stop2stop[,54:ncol(training.pos.raw)] , as.numeric)
+stop2stop[,22:62] <- lapply(stop2stop[,22:62] , factor)
+stop2stop[,63:ncol(training.pos.raw)] <- lapply(stop2stop[,63:ncol(training.pos.raw)] , as.numeric)
 
 #mark the positions that were used for model training
 stop2stop$used_in_model_training <- 'no'

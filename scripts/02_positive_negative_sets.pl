@@ -78,8 +78,10 @@ while (<MAT>){
 
         my @l=split(",");
         my $dir=$l[2];
-        my $start_codon=$l[4];
-        my $fpkm=$l[12]; 
+        #my $start_codon=$l[4];
+        #my $fpkm=$l[12]; 
+        my $start_codon=$l[13];
+        my $fpkm=$l[21];
 
         my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)/;
  
@@ -170,7 +172,9 @@ while ($size1 < ($positive_train+$positive_test)){
 
     my $index = rand @start_random;
     my @position=split(",",$start_random[$index]);
-    if ($position[12] >= $median_exp){ #filter on median expression
+#    if ($position[12] >= $median_exp){ #filter on median expression
+    if ($position[21] >= $median_exp){ #filter on median expression
+
         if ($size1 < $positive_train){
             push (@positive_train, splice @start_random, $index, 1);
         }else{
