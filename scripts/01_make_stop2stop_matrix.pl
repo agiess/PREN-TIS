@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 28/09/2017
+#to do 12/01/2018
 #script to produce the matrix for pca, start codon classifiaction
 #output is split into lengths.
 #for each gene look upstream of the start codon to find the next in frame stop codon
@@ -269,7 +269,7 @@ print "sam parsed\n";
 open (OUT, ">$out_file") || die;
 
 #header
-print OUT "#id,codon,dir,canonical_candidate_sites_ORF_region,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,proportion_of_reads_at_position,proportion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
+print OUT "#id,codon,dir,distance_to_region_start,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,proportion_of_reads_at_position,proportion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
 
 for my $hpos (-$WINDOW_START .. $WINDOW_END){
     print OUT ",seq_".$hpos;    
@@ -330,9 +330,9 @@ for my $chr (sort keys %fasta_sequences){
                 $window_seq=~tr/ACGTacgt/TGCAtgca/;
  
                 #fkpm + codon rank here
-                my ($ORF_FPKM, $codon_rank)=&stop2stop_rev($chr,$codon_pos);
+                my ($ORF_FPKM, $distance_to_start_of_stop2_stop_region)=&stop2stop_rev($chr,$codon_pos);
 
-                print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                print OUT "$id,$codon,rev,$distance_to_start_of_stop2_stop_region,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
                 
                 #Loop through sequence here
                 my @seq_out=split("",$window_seq); #window seq is already reversed
@@ -408,9 +408,9 @@ for my $chr (sort keys %fasta_sequences){
                 my $window_seq=substr($fasta_sequences{$chr}, ($codon_pos-($WINDOW_START+1)), ($WINDOW_START+$WINDOW_END+1));
  
                 #fkpm + codon rank here
-                my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$codon_pos);
+                my ($ORF_FPKM,$distance_to_start_of_stop2_stop_region)=&stop2stop_fwd($chr,$codon_pos);
 
-                print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                print OUT "$id,$codon,fwd,$distance_to_start_of_stop2_stop_region,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
       
                 #Loop through sequence here
                 #output sequence
@@ -450,12 +450,11 @@ exit;
 sub stop2stop_fwd{
     #for a given position (chr + pos)
     #find the nearest downstream in frame stop codon, and upstream in frame stop codon (to a limit of 999nt, without going out of chr limits)
-    #calculate fkpm
-    #calculate the number of potential start sites upstream of this one + 1
 
     my $CHR=$_[0];
     my $current_codon_pos=$_[1];
     my $upstream_codons=0;
+    my $distance_to_upstream_stop_codon=0;
 
     ###
     #find upstream stop codon
@@ -463,7 +462,7 @@ sub stop2stop_fwd{
 
     #keep track of the potential start sites     
     my $search=1;
-    my $count=0;  #set upper limit to 1000 (100)
+    my $count=0;  #set upper limit to 999
     my $pos=$current_codon_pos-1;
     while ($search){
         $pos=$pos-3;
@@ -483,6 +482,8 @@ sub stop2stop_fwd{
         if ($count>=333){ $search=0; } #limit to 999nt
         $count++
     }
+
+    $distance_to_upstream_stop_codon=$count*3;
 
     ###
     #find downstream stop codon
@@ -519,7 +520,7 @@ sub stop2stop_fwd{
    }
 
    my $ORF_FPKM=eval { (1000000000*$read_sum)/($total_counts*$ORF_length) } || 0;
-   return ($ORF_FPKM, $upstream_codons);
+   return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -530,6 +531,7 @@ sub stop2stop_rev{
 
     my $upstream_codons=0;
     my $ORF_stop=0;
+    my $distance_to_upstream_stop_codon=0;
 
     ###
     #find upstream stop codon
@@ -558,6 +560,8 @@ sub stop2stop_rev{
         if ($count>=333){ $search=0; } #limit to 999nt
         $count++;        
     }
+
+    $distance_to_upstream_stop_codon=$count*3;
 
     ###
     #find downstream stop codon
@@ -596,7 +600,7 @@ sub stop2stop_rev{
     }
 
     my $ORF_FPKM=eval { (1000000000*$read_sum)/($total_counts*$ORF_length) } || 0;  
-    return ($ORF_FPKM, $upstream_codons);
+    return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

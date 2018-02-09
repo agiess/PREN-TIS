@@ -45,11 +45,10 @@ while (<IN>){
         $scaled_coefficient =~ tr/"/'/d;
  
         #names
-        if ($name =~ /canonical_candidate_sites_ORF_region/ ){ $upstream_TIS=$scaled_coefficient; }
+        if ($name =~ /distance_to_region_start/ ){ $upstream_TIS=$scaled_coefficient; }
         if ($name =~ /proportion_of_reads_upstream/ ){ $reads_up=$scaled_coefficient; }                  
         if ($name =~ /proportion_of_reads_downstream/ ){ $reads_down=$scaled_coefficient; }
         if ($name =~ /proportion_of_reads_at_position/ ){ $reads_position=$scaled_coefficient; }
-        if ($name =~ /window_up_down_ratio/ ){ $reads_position=$scaled_coefficient; }                           #to remove
         if ($name =~ /ORF_fpkm/ ){ $ORF_FPKM=$scaled_coefficient; }
 
         elsif ($name =~ /codon\.\w{3}/ ){ 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#to do 04/12/2017
+#to do 08/02/2018
 #script to produce the matrix for pca, start codon classifiaction
 #output is split into lengths.
 #for each gene look upstream of the start codon to find the next in frame stop codon
@@ -389,7 +389,7 @@ for my $gene (keys %stop2stop_start_coord_rev){
 open (OUT, ">$out_file") || die;
 
 #header
-print OUT "#id,codon,dir,canonical_candidate_sites_ORF_region,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,proportion_of_reads_at_position,proportion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
+print OUT "#id,codon,dir,distance_to_region_start,annotated_start_site,near_cognate_codon,reads_at_pos,window_reads_downstream,window_reads_upstream,proportion_of_reads_at_position,proportion_of_reads_upstream,proportion_of_reads_downstream,ORF_fpkm";
 
 for my $hpos (-$WINDOW_START .. $WINDOW_END){
     print OUT ",seq_".$hpos;    
@@ -460,9 +460,9 @@ for my $gene (sort keys %start_of_stop2stop_fwd){
                         my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
                         #fpkm + codon rank here
-                        my ($ORF_FPKM,$codon_rank)=&stop2stop_fwd($chr,$gene,$start_coord);
+                        my ($ORF_FPKM,$distance_to_start_of_stop2_stop_region)=&stop2stop_fwd($chr,$gene,$start_coord);
 
-                        print OUT "$id,$codon,fwd,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                        print OUT "$id,$codon,fwd,$distance_to_start_of_stop2_stop_region,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
  
                         my $window_seq; #for loop here for coords
                         #Loop through sequence here
@@ -553,9 +553,9 @@ for my $gene (sort keys %start_of_stop2stop_rev){
                         my $proportion_downstream=eval {$window_reads_downstream/$win_sum} || 0;
 
                         #fpkm + codon rank here
-                        my ($ORF_FPKM,$codon_rank)=&stop2stop_rev($chr,$gene,$start_coord);
+                        my ($ORF_FPKM,$distance_to_start_of_stop2_stop_region)=&stop2stop_rev($chr,$gene,$start_coord);
 
-                        print OUT "$id,$codon,rev,$codon_rank,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
+                        print OUT "$id,$codon,rev,$distance_to_start_of_stop2_stop_region,$annotated_start_site,$near_cognate,$reads_at_pos,$window_reads_downstream,$window_reads_upstream,$proportion_at_position,$proportion_downstream,$proportion_upstream,$ORF_FPKM";
 
                         my $window_seq; #for loop here for coords
                         #Loop through sequence here
@@ -591,8 +591,6 @@ for my $gene (sort keys %start_of_stop2stop_rev){
 
 close(OUT);
 
-print "fwd gene processed\nshortest: $SHORTEST_FRAGMENT\nlongest: $LONGEST_FRAGMENT\n";
-
 exit;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -607,14 +605,17 @@ sub stop2stop_fwd{
 
     my $stop_coord=($stop2stop_stop_coord_fwd{$GENE})-3;
     my $upstream_TIS=0;
+    my $distance_to_upstream_stop_codon=0;
 
     ###
     # Find upstream TIS
     ###
 
     my $coord=$TRANSCRIPT_COORD;
+    my $count=0;
     while ($coord >= 3){
-        $coord-=3;  
+         $coord-=3;
+         $count++; 
          my $codon1=substr($fasta_sequences{$CHR}, (($gene_model_fwd{$GENE}{ ($coord+0)}) -1), 1);
          my $codon2=substr($fasta_sequences{$CHR}, (($gene_model_fwd{$GENE}{ ($coord+1)}) -1), 1);
          my $codon3=substr($fasta_sequences{$CHR}, (($gene_model_fwd{$GENE}{ ($coord+2)}) -1), 1);
@@ -624,6 +625,8 @@ sub stop2stop_fwd{
              $upstream_TIS++;
          }
     }
+
+    $distance_to_upstream_stop_codon=$count*3;
 
     ###
     #find orf FPKM
@@ -641,7 +644,7 @@ sub stop2stop_fwd{
     }
 
     my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
-    return ($orf_FPKM, $upstream_TIS); 
+    return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
@@ -653,15 +656,17 @@ sub stop2stop_rev{
 
     my $stop_coord=($stop2stop_stop_coord_rev{$GENE})-3;
     my $upstream_TIS=0;
+    my $distance_to_upstream_stop_codon=0;
 
     ###
     #find upstream stop codon
     ###
 
     my $coord=$TRANSCRIPT_COORD;
+    my $count=0;
     while ($coord >= 3){
         $coord-=3;
-
+        $count++;
         my $codon1=substr($fasta_sequences{$CHR}, (($gene_model_rev{$GENE}{ ($coord+0)}) -1), 1); #the fasta sequence is
         my $codon2=substr($fasta_sequences{$CHR}, (($gene_model_rev{$GENE}{ ($coord+1)}) -1), 1);
         my $codon3=substr($fasta_sequences{$CHR}, (($gene_model_rev{$GENE}{ ($coord+2)}) -1), 1);
@@ -672,6 +677,8 @@ sub stop2stop_rev{
             $upstream_TIS++;
         }
     }
+
+    $distance_to_upstream_stop_codon=$count*3;
 
     ###
     #find orf FPKM
@@ -689,7 +696,7 @@ sub stop2stop_rev{
     }
 
     my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
-    return ($orf_FPKM, $upstream_TIS);
+    return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

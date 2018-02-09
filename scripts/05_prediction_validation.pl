@@ -47,7 +47,7 @@ while (<PEP>){
         if ($dir eq "+"){                                      #fwd cases
             #five_prime=$start;
             my $stop_position=&closest_inframe_downstream_stop_codon_fwd($chr,$start);
-            $n_term_fwd{$chr}{$stop_position}=$start;
+            $n_term_fwd{$chr}{$stop_position}=$start; 
         }else{                                                 #reverse cases
             #five_prime=$stop;
             my $stop_position=&closest_inframe_downstream_stop_codon_rev($chr,$stop);
@@ -224,7 +224,7 @@ for my $chr (keys %n_terminally_supported_ORF_match){
 #FALSE_NEGATIVE = The number of ORFs with N-terminal support that were not predicted
 
 my $false_negative=$supported_ORF_count-$ORFs_found_count;
-my $true_negative=$total_TIS_count_in_supported_genes-$total_predictions_in_supported_ORFs-$true_positive-$false_positive-$false_negative;
+my $true_negative=$total_TIS_count_in_supported_genes-$supported_ORF_count-$false_positive;
 
 print "TOTAL_PREDICTIONS\t$total_predictions_in_supported_ORFs\n";
 print "TOTAL_SUPPORTED_ORFS\t$supported_ORF_count\n";

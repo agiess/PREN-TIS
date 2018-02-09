@@ -8,7 +8,7 @@ use strict;
 my $gtf=$ARGV[0];
 my $fasta=$ARGV[1]; 
 my $nterm=$ARGV[2]; #bed of N-termini predictions
-my $bed=$ARGV[3];   #of predictions
+my $pred=$ARGV[3];   #of predictions
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open gtf and get transcript lengths
@@ -221,7 +221,7 @@ for my $gene (keys %stop2stop_start_coord_fwd){
 
         if (exists ($gene_model_fwd{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
 
-            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord-0)} -1), 1);     #remember the fasta sequence is zero based
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord-0)} -1), 1); #Fasta sequence is zero based
             my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+1)} -1), 1);
             my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+2)} -1), 1);
             my $seq=$codon1.$codon2.$codon3;
@@ -250,7 +250,7 @@ for my $gene (keys %stop2stop_start_coord_rev){
 
         if (exists ($gene_model_rev{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
 
-            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord-0) } -1) ,1); #remember the fasta sequence is zero based
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord-0) } -1) ,1); #Fasta sequence is zero based
             my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+1) } -1) ,1);
             my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+2) } -1) ,1);
             my $seq=$codon1.$codon2.$codon3;
@@ -297,13 +297,14 @@ close (PEP);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #assign N-termini to genes
-my %supported_genes; #later we want to calculate on only gene with support
-my $n_sum_ano=0;
-my $n_sum_tru=0;
-my $n_sum_elo=0;
-my %n_term_assignment_fwd; #chr, start, stop = ann/tru/elo
-my %n_term_assignment_rev; #chr, stop, start = ann/tru/elo
-my $total_TIS=0;; #count all of the potential TIS is supported genes
+my $total_TIS_count_in_supported_genes=0;
+my $supported_ORF_count=0;
+my $supported_matching=0;
+my $supported_truncation=0;
+my $supported_elongation=0;
+my %N_terminal_assingment_fwd; #key1 = chr, key2= stop, value = ["Annotated", "Truncated", "Extended"]
+my %N_terminal_assingment_rev; #key1 = chr, key2= stop, value = ["Annotated", "Truncated", "Extended"]
+
 
 for my $gene (keys %gene_model_fwd){
     my $stop_codon_coord = $stop2stop_stop_coord_fwd{$gene};
@@ -314,23 +315,23 @@ for my $gene (keys %gene_model_fwd){
     if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
 
         if (exists ($n_term_fwd{$chr}{$stop_codon_pos})){  #if they share a stop codon
-            $supported_genes{$gene}=1;
-
+            $supported_ORF_count++;
+   
             my $start_codon_pos = $gene_model_fwd{$gene}{ $start_codon_coord };
             my $nterm_start = $n_term_fwd{$chr}{$stop_codon_pos};
 
             if ($nterm_start == $start_codon_pos){
-                $n_sum_ano++;
-                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="ann";
+                $supported_matching++;
+                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Annotated";
             }elsif( $nterm_start < $start_codon_pos ){
-                $n_sum_tru++;
-                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="tru";
+                $supported_truncation++;
+                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Truncated";
             }else{
-                $n_sum_elo++; 
-                $n_term_assignment_fwd{$chr}{$stop_codon_pos}{$nterm_start}="elo";
+                $supported_elongation++;
+                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Extended";
             }
  
-            #I can also count potential TIS's here
+            #Count potential TIS's here
             my $search_coord=$start_of_stop2stop_fwd{$gene};
 
             while ($search_coord < $stop_codon_coord){ #start of stop2stop region to stop codon
@@ -341,7 +342,7 @@ for my $gene (keys %gene_model_fwd){
                 my $seq=$codon1.$codon2.$codon3;
 
                 if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
-                    $total_TIS++;
+                    $total_TIS_count_in_supported_genes++;
                 }
                 $search_coord+=3;
             }
@@ -358,20 +359,20 @@ for my $gene (keys %gene_model_rev){
     if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
 
         if (exists ($n_term_rev{$chr}{$stop_codon_pos})){  #if they share a stop codon
-            $supported_genes{$gene}=1;
+            $supported_ORF_count++;
 
             my $start_codon_pos = $gene_model_rev{$gene}{ $start_codon_coord };
             my $nterm_start = $n_term_rev{$chr}{$stop_codon_pos};
 
             if ($nterm_start == $start_codon_pos){
-                $n_sum_ano++;
-                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="ann";
+                $supported_matching++;
+                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Annotated";
             }elsif( $nterm_start > $start_codon_pos ){
-                $n_sum_tru++;
-                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="tru";
+                $supported_truncation++;
+                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Truncated";
             }else{
-                $n_sum_elo++;
-                $n_term_assignment_rev{$chr}{$stop_codon_pos}{$nterm_start}="elo";
+                $supported_elongation++;
+                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Extended";
             }
 
             #I can also count poitential TIS's here
@@ -385,7 +386,7 @@ for my $gene (keys %gene_model_rev){
                 $seq=~tr/ACGTacgt/TGCAtgca/;
 
                 if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
-                    $total_TIS++;
+                    $total_TIS_count_in_supported_genes++;
                 }
                 $search_coord+=3;
             }
@@ -393,183 +394,117 @@ for my $gene (keys %gene_model_rev){
     }
 }
 
-##got to here
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-my $count_supported=keys %supported_genes;
+my $true_positive=0;
+my $false_positive=0;
+my $total_predictions_in_supported_ORFs=0;
+my %n_terminally_supported_ORF_match;
 
-#print "matching annotation:  $n_sum_ano\n";
-#print "predicted truncation: $n_sum_tru\n";
-#print "predoicted extension: $n_sum_elo\n";
-#print "supported TIS $count_supported\n";
-#print "potential TIS $total_TIS\n";
+my $positive_annotated=0;
+my $positive_truncated=0;
+my $positive_extended=0;
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#open bed of predictions
-my %call; 
-my $pred_sum_ano=0;
-my $pred_sum_tru=0;
-my $pred_sum_elo=0;
-
-open (BED, $bed) || die;
-while (<BED>){
-
+open (PRED, $pred) || die "can't open $pred";      #bed is O based at start, 1 based at end
+while (<PRED>){
     unless (/^track/){  #skip header
         my @b=split("\t");
         my $chr=$b[0];
         my $start=$b[1]+1;     #start is zero based
         my $stop=$b[2];
-        my $count=$b[4];
         my $dir=$b[5];
-        my $type=$b[3]; #Annotated Truncation Extension
-
-        if ($type eq "Annotated"){  $pred_sum_ano++; }
-        if ($type eq "Extension"){  $pred_sum_elo++; }
-        if ($type eq "Truncation"){ $pred_sum_tru++; }
 
         if ($dir eq "+"){
 
-            $stop=$stop-2; #1st nt of stop codon
-
             #check if the region shares a stop codon with a peptide
-            if (exists ($n_term_assignment_fwd{$chr}{$stop}) ){  
+            if (exists ($N_terminal_assingment_fwd{$chr}{$stop-2} )){
 
-                for my $nstart (keys %{ $n_term_assignment_fwd{$chr}{$stop} } ){
+                $n_terminally_supported_ORF_match{$chr}{$stop-2}=1;
+                        
+                $total_predictions_in_supported_ORFs++;
 
-                    if ($type eq "Annotated"){
-                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){
-                            if ($start == $nstart){ $call{$chr}{$stop}="ano_ano"; }
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){ 
-                            $call{$chr}{$stop}="ano_tru"; 
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
-                            $call{$chr}{$stop}="ano_elo";
-                        }
+                #check if the start codon matches the start of the N-terminal peptide
+                if ($start == $n_term_fwd{$chr}{$stop-2}){
+                    $true_positive++;
+            
+                    if ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Annotated"){ $positive_annotated++; 
+                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Truncated"){ $positive_truncated++;
+                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Extended"){ $positive_extended++; }
 
-                    #check for extensions
-                    }elsif ( $type eq "Extension"){
-                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){ 
-                            $call{$chr}{$stop}="elo_ano";
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){ 
-                            $call{$chr}{$stop}="elo_tru"; 
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
-                            if ($start == $nstart){ $call{$chr}{$stop}="elo_elo"; }
-                        } 
-
-                    #otherwise truncation
-                    }elsif ( $type eq "Truncation"){
-                        if ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "ann"){ 
-                            $call{$chr}{$stop}="tru_ano";
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "tru"){
-                            if ($start == $nstart){ $call{$chr}{$stop}="tru_tru"; }
-                        }elsif ($n_term_assignment_fwd{$chr}{$stop}{$nstart} eq "elo"){ 
-                            $call{$chr}{$stop}="tru_elo";
-                        }
-                    }
+                }else{
+                    $false_positive++;
                 }
             }
-        #rev
-        }else{
+        }else{ #reverse cases
 
-            #for rev, start is 3' (stop)
-            #stop is 5' (start)
-            $start=$start+2;
+            #check if the prediction shared a stop codon with a N-termnially supported ORF
+            if (exists ( $n_term_rev{$chr}{$start+2} )){
 
-            #check if the region shares a stop codon with a peptide
-            if (exists ($n_term_assignment_rev{$chr}{$start} ) ){
+                $n_terminally_supported_ORF_match{$chr}{$start+2}=1;
 
-                for my $nstop (keys %{ $n_term_assignment_rev{$chr}{$start}} ){
+                $total_predictions_in_supported_ORFs++;
 
-                    if ($type eq "Annotated"){
-                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ann"){ 
-                            if ($stop == $nstop){ $call{$chr}{$start}="ano_ano"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){ 
-                            $call{$chr}{$start}="ano_tru";
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
-                            $call{$chr}{$start}="ano_elo";
-                        }
+                #check if the start codon matches the start of the N-terminal peptide
+                if ($stop == $n_term_rev{$chr}{$start+2}){
+                    $true_positive++;
 
-                    }elsif ($type eq "Extension"){
-                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
-                            if ($stop == $nstop){ $call{$chr}{$start}="elo_elo"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){ 
-                            $call{$chr}{$start}="elo_tru";
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ano"){ 
-                            $call{$chr}{$start}="elo_ano"; 
-                        }
-                 
-                    }elsif ($type eq "Truncation"){
-                        if ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "tru"){
-                            if ($stop == $nstop){ $call{$chr}{$start}="tru_tru"; }
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "ann"){ 
-                            $call{$chr}{$start}="tru_ano";
-                        }elsif ($n_term_assignment_rev{$chr}{$start}{$nstop} eq "elo"){ 
-                            $call{$chr}{$start}="tru_elo"; 
-                        }
-                    }
+                    if ($N_terminal_assingment_rev{$chr}{$start+2} eq "Annotated"){ $positive_annotated++;
+                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Truncated"){ $positive_truncated++;
+                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Extended"){ $positive_extended++; }
+
+                }else{
+                    $false_positive++;
                 }
-            }   
+            }
         }
     }
 }
-close(BED);
 
+close (PRED);
+            
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-my $ano_ano=0;
-my $ano_tru=0;
-my $ano_elo=0;
-my $tru_ano=0;
-my $tru_tru=0;
-my $tru_elo=0;
-my $elo_ano=0;
-my $elo_tru=0;
-my $elo_elo=0;
 
-for my $c (keys %call){
-    for my $p (keys %{$call{$c}}){
-        if ($call{$c}{$p} eq "ano_ano"){ $ano_ano++;}
-        if ($call{$c}{$p} eq "ano_tru"){ $ano_tru++;}
-        if ($call{$c}{$p} eq "ano_elo"){ $ano_elo++;}
-        if ($call{$c}{$p} eq "tru_ano"){ $tru_ano++;}
-        if ($call{$c}{$p} eq "tru_tru"){ $tru_tru++;}
-        if ($call{$c}{$p} eq "tru_elo"){ $tru_elo++;}
-        if ($call{$c}{$p} eq "elo_ano"){ $elo_ano++;}
-        if ($call{$c}{$p} eq "elo_tru"){ $elo_tru++;}
-        if ($call{$c}{$p} eq "elo_elo"){ $elo_elo++;}
+my $ORFs_found_count=0;
+
+for my $chr (keys %n_terminally_supported_ORF_match){
+    for (keys %{ $n_terminally_supported_ORF_match{$chr} }) {
+        $ORFs_found_count++;
     }
 }
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-print ",,nterminal_support,,\n";
-print "predictions,,ann,elo,tru\n";
-print ",sum,$n_sum_ano,$n_sum_elo,$n_sum_tru\n";
-print "ann,$pred_sum_ano,$ano_ano,$ano_elo,$ano_tru\n";
-print "ext,$pred_sum_elo,$elo_ano,$elo_elo,$elo_tru\n";
-print "tru,$pred_sum_tru,$tru_ano,$tru_elo,$tru_tru\n";
+#TRUE_POSITIVE  = The number of predicted ORFs that agree with N-terminal peptides
+#FALSE_POSITIVE = The number of predicted ORFs that disagree with N-terminal peptide
+#TRUE_NEGATIVE  = The number of potential start sites in ORFs with N-terminal support, that were neither predicted nor supported
+#FALSE_NEGATIVE = The number of ORFs with N-terminal support that were not predicted
 
-#summary stats
-#True +ve: Supported and predicted ORFs 
-#False +ve: Predicted ORFs that disagreed with supported positions.
-#False -ve: Supported genes where no ORF was predicted.
-#True -ve:  All potential TIS in supported stop2stop regions, that were neither predicted nor supported.
+my $false_negative=$supported_ORF_count-$ORFs_found_count;
+my $true_negative=$total_TIS_count_in_supported_genes-$supported_ORF_count-$false_positive;
 
-print "\nthere are $count_supported, genes with n-terminal info\n";
-print "there are $total_TIS, candidate TIS in all supported genes\n";
+print "TOTAL_PREDICTIONS\t$total_predictions_in_supported_ORFs\n";
+print "TOTAL_SUPPORTED_ORFS\t$supported_ORF_count\n";
+print "\n";
 
-my $predicted_correct=$ano_ano+$elo_elo+$tru_tru;
-my $predicted_incorrect=$ano_elo+$ano_tru+$elo_ano+$elo_tru+$tru_ano+$tru_elo;
-my $supported_not_found=$count_supported-$predicted_correct-$predicted_incorrect;
-my $correctly_rejected=$total_TIS-$predicted_correct-$predicted_incorrect-$supported_not_found;
+print "TRUE_POSITIVE\t$true_positive\n";
+print "FALSE_POSITIVE\t$false_positive\n";
+print "TRUE_NEGATIVE\t$true_negative\n";
+print "FALSE_NEGATIVE\t$false_negative\n";
 
-my $sensitivity=$predicted_correct/($predicted_correct+$supported_not_found);
-my $specificity=$correctly_rejected/($predicted_incorrect+$correctly_rejected);
-my $precision=$predicted_correct/($predicted_correct+$predicted_incorrect);
+print "\nOf the true positives:\n";
+print "Supported_matching:\t$positive_annotated of $supported_matching sites predicted\n";
+print "Supported_truncation:\t$positive_truncated of $supported_truncation sites predicted\n";
+print "Supported_elongation:\t$positive_extended of $supported_elongation sites predicted\n";
 
-print "\ntrue positive: $predicted_correct\n";
-print "true negative: $correctly_rejected\n";
-print "false positive: $predicted_incorrect\n";
-print "false negative: $supported_not_found\n";
+my $predicted_correct=$true_positive;
+my $predicted_incorrect=$false_positive;
+my $supported_not_found=$false_negative;
+my $correctly_rejected=$true_negative;
 
-print "\nsensitivity: $sensitivity\n";
-print "specificity: $specificity\n";
-print "positive_predictive_value: $precision\n";
+my $sensitivity=eval{$predicted_correct/($predicted_correct+$supported_not_found)} || 0 ;
+my $specificity=eval{$correctly_rejected/($predicted_incorrect+$correctly_rejected)} || 0;
+my $precision=eval{$predicted_correct/($predicted_correct+$predicted_incorrect)} || 0;;
+
+print "\n";
+print "sensitivity\t$sensitivity\n";
+print "specificity\t$specificity\n";
+print "positive_predictive_value\t$precision\n";
 
 exit;
