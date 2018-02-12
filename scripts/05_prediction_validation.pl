@@ -175,7 +175,6 @@ while (<PRED>){
 
                     if ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Annotated"){ $positive_annotated++; 
                     }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Truncated"){ $positive_truncated++;   
-                        print "$chr,$start,$stop\n";
                     }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Extended"){ $positive_extended++; }
     
                 }else{
@@ -197,7 +196,6 @@ while (<PRED>){
 
                     if ($N_terminal_assingment_rev{$chr}{$start+2} eq "Annotated"){ $positive_annotated++;
                     }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Truncated"){ $positive_truncated++;                
-                        print "$chr,$start,$stop\n";
                     }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Extended"){ $positive_extended++; }
 
                 }else{
