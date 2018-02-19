@@ -643,7 +643,7 @@ sub stop2stop_fwd{
         }
     }
 
-    my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
+    my $ORF_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
     return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 
@@ -695,7 +695,7 @@ sub stop2stop_rev{
         }
     }
 
-    my $orf_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
+    my $ORF_FPKM=eval { (1000000000*$orf_sum)/($total_counts*$orf_length) } || 0;
     return ($ORF_FPKM, $distance_to_upstream_stop_codon);
 }
 

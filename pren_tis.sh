@@ -26,8 +26,8 @@ OPTIONS:
 
     optional:
     -v  <file.bed>                 validated open reading frames in bed format
-    -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
     -p  <number between 0 and 1>   the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
+    -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
     -d  No argument                flag to disable glm feature selection
     -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
     -i  <number>                   minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)

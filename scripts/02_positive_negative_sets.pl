@@ -19,6 +19,8 @@ my $bed_file=$ARGV[6];           #validated start sites (optional)
 my %n_term_fwd; #key=chr, key=start_position, value=count
 my %n_term_rev;
 
+my $n_term_count=0;
+
 if ($bed_file){
     #open bed file
 
@@ -26,6 +28,9 @@ if ($bed_file){
     while (<BED>){
 
         unless (/^track/){         #skip header
+
+            $n_term_count++;       #number of genes to exlude from the positive set calculations
+
             my @b=split("\t");
 	     	my $chr=$b[0];
             my $start=$b[1]+1;     #start is zero bases
@@ -80,22 +85,15 @@ while (<MAT>){
         my $dir=$l[2];
         my $start_codon=$l[4];
         my $fpkm=$l[12]; 
-        #my $start_codon=$l[13];
-        #my $fpkm=$l[21];
-        #my $start_codon=$l[5];
-        #my $fpkm=$l[13]; 
-       
-
+      
         my ($chr, $pos) = $l[0] =~ /^(.*)_(\d+)_(fwd|rev)/;
  
-        #start codons
-        if ($start_codon eq "TRUE"){ 
+        if ($start_codon eq "TRUE"){ #annotated start codons
     
             if ($dir eq "fwd"){
 
                 if (exists ($n_term_fwd{$chr}{$pos})){
                     push (@start_supported,$_);  #for counting
-                    push (@start_FPKM,$fpkm); 
                 }else{
                     push (@start_random,$_);
                     push (@start_FPKM,$fpkm);
@@ -104,14 +102,13 @@ while (<MAT>){
             }else{ #rev
                 if (exists ($n_term_rev{$chr}{$pos})){
                     push (@start_supported,$_);   #for counting
-                    push (@start_FPKM,$fpkm);
                 }else{
                     push (@start_random,$_);
                     push (@start_FPKM,$fpkm);
                 }
             }
 
-        }else{ #non start codons
+        }else{ #not annotated start codons
             if ($dir eq "fwd"){
                 unless (exists ($n_term_fwd{$chr}{$pos})){
                     push (@not_start,$_);
@@ -140,10 +137,6 @@ for my $ORF (sort {$a <=> $b} @start_FPKM){
 	}
 }
 
-print "There are $size genes\n";
-print "The median expression value is $median_exp FPKM\n";
-print "The proportion of highly expressed genes to select is $proportion\n";
-
 my $positive_train=int((($size/2)*$proportion)*0.8);
 my $positive_test=int((($size/2)*$proportion)*0.2);
 
@@ -151,15 +144,22 @@ if ($bed_file){
     my $sizeUn=@start_random;
     my $sizeSu=@start_supported;
 
-    print "There are $sizeUn start codons that are not supported by the validation set\n";
-    print "There are $sizeSu start codons supported by the validation set\n";
-
+    print "There are $sizeSu genes supported the validation set\n";
+    print "There are $sizeUn genes that are not supported by the validation set\n";
+    print "The median expression value of those genes is $median_exp FPKM\n";
+    print "The proportion of highly expressed genes to select is $proportion\n";
 
     #check if there are enough highly expressed start codons after exlcuding validated positions
-    if ((($size/2)-$sizeSu) < ($positive_train+$positive_test) ){
-        print "there are not enough positive examples after exluding validated positions, either use a smaller validation set or lower proportion of highly expressed genes\n";
+    if ($positive_train < 10){
+        print "ERROR: There are not enough positive examples to train the model, either use a smaller validation set or a larger proportion of highly expressed genes\n";
         exit 1;
+    }elsif($positive_train < 500){
+        print "WARNING: Only $positive_train positive examples will be available for model training, this may result in poor performace\n";
     }
+}else{
+    print "There are $size genes\n";
+    print "The median expression value of those genes is $median_exp FPKM\n";
+    print "The proportion of highly expressed genes to select is $proportion\n";
 }
 
 #set seed
@@ -176,8 +176,6 @@ while ($size1 < ($positive_train+$positive_test)){
     my $index = rand @start_random;
     my @position=split(",",$start_random[$index]);
    if ($position[12] >= $median_exp){ #filter on median expression
-#   if ($position[21] >= $median_exp){ #filter on median expression
-#   if ($position[13] >= $median_exp){ #filter on median expression
      if ($size1 < $positive_train){
             push (@positive_train, splice @start_random, $index, 1);
         }else{
