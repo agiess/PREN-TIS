@@ -6,6 +6,7 @@ library (ggplot2)
 library (data.table)
 
 n.threads<-as.integer(args[15])
+my_seed<-as.integer(args[16])
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #start a h2o instance
@@ -73,7 +74,7 @@ grid.10fold <- h2o.grid(
   intercept = FALSE,
   lambda_search = TRUE, 
   nfolds=10,
-  seed = 7777777,
+  seed = my_seed,
   balance_classes = FALSE
 )
 
@@ -138,7 +139,7 @@ tree_grid_10fold <- h2o.grid(
   y = ncol(train.hex), 
   training_frame = train.hex, 
   nfolds=10,
-  seed = 7777777,                                                             
+  seed = my_seed,                                                             
   balance_classes = FALSE                                             
 )
 

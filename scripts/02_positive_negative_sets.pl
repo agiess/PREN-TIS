@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-#07/12/2017
+#08/05/2018
 #script to take a matrix of genomic positions and an optional bed file of supported start sites (for example N-terminal proteomics)
 #assign codons to neative and positive sets
 #take the 50% highest genes by cds expression in the positive set (exluding positions that will later be used for validation)
@@ -13,7 +13,8 @@ my $out_train_negative=$ARGV[2]; #Inframe non-start codons
 my $out_test_positive=$ARGV[3];  #Start codons from upper 50% of genes by expression,
 my $out_test_negative=$ARGV[4];  #Inframe non-start codons
 my $proportion=$ARGV[5];         #the proportion of the 50% highest genes to select for positives
-my $bed_file=$ARGV[6];           #validated start sites (optional)
+my $seed=$ARGV[6];               #seed for random number generation
+my $bed_file=$ARGV[7];           #validated start sites (optional)
 
 ###################################################################################################
 my %n_term_fwd; #key=chr, key=start_position, value=count
@@ -163,7 +164,7 @@ if ($bed_file){
 }
 
 #set seed
-srand(7777);
+srand($seed);
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #select all start codons from the upper 50% of genes by expression, without N-termini support

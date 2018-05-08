@@ -31,6 +31,7 @@ OPTIONS:
     -e  flag for eukaryotic samples (defaults to prokaryotic)
     -d  flag to disable glm feature selection (defaults to use feature selection)
     -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
+    -s  set a seed for reproducible set selection and model training (defaults to random)
     -t  number of threads for model training/prediction (defaults to 1 thread)
     -i  minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
     -a  maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)

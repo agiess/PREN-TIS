@@ -68,6 +68,9 @@ my $supported_elongation=0;
 
 open(GENES,$gtf) || die "can't open $gtf";        #gtf is 1 based
 while (<GENES>){
+
+    chomp;
+
     unless(/^#/){
         my @b=split("\t");
         my $class=$b[2];
@@ -92,15 +95,13 @@ while (<GENES>){
                     #get all potenital TIS
                     my $potential_TIS_ref=&find_potential_TIS_in_stop_2_stop_region_fwd($chr,$prim3-2,$prim5);
                     my @potential_TIS=@{$potential_TIS_ref};
-                    #print "fwd,$gene_id,$chr"; for (sort @potential_TIS){ print ",$_"; } print "\n"; 
-                    print "$chr\tshuffled\t$class\t".$potential_TIS[rand @potential_TIS]."\t$prim3\t$dir\t$b[6]\t$b[7]\t$b[8]\n";
-                    
-                #do I also need to print the "exon" line
-
+                    #print "fwd,$gene_id,$chr"; for (sort @potential_TIS){ print ",$_"; } print "\n";
+                    my $selected_TIS=$potential_TIS[rand @potential_TIS];
+                    print "$chr\tshuffled\t$class\t$selected_TIS\t$prim3\t$dir\t$b[6]\t$b[7]\t$b[8]\n";
+                    print "$chr\tshuffled\texon\t$selected_TIS\t$prim3\t$dir\t$b[6]\t$b[7]\t$b[8]\n";
                 }else{
-                    print "$_";
-                #do I also need to print the "exon" line
-
+                    print "$_\n";
+                    print "$b[0]\t$b[1]\texon\t$b[3]\t$b[4]\t$b[5]\t$b[6]\t$b[7]\t$b[8]\n";
                 }
             }else{
 
@@ -110,11 +111,12 @@ while (<GENES>){
                     my $potential_TIS_ref=&find_potential_TIS_in_stop_2_stop_region_rev($chr,$prim5+2,$prim3);
                     my @potential_TIS=@{$potential_TIS_ref};
                     #print "rev,$gene_id,$chr"; for (sort @potential_TIS print ",$_"; } print "\n";
-                    print "$chr\tshuffled\t$class\t$prim5\t".$potential_TIS[rand @potential_TIS]."\t$b[6]\t$dir\t$b[7]\t$b[8]\n";
-                #do I also need to print the "exon" line
-                                }else{
-                    print "$_";
-                #do I also need to print the "exon" line
+                    my $selected_TIS=$potential_TIS[rand @potential_TIS];                   
+                    print "$chr\tshuffled\t$class\t$prim5\t$selected_TIS\t$b[6]\t$dir\t$b[7]\t$b[8]\n";
+                    print "$chr\tshuffled\texon\t$prim5\t$selected_TIS\t$b[6]\t$dir\t$b[7]\t$b[8]\n";
+                 }else{
+                    print "$_\n";
+                    print "$b[0]\t$b[1]\texon\t$b[3]\t$b[4]\t$b[5]\t$b[6]\t$b[7]\t$b[8]\n";
                 }
             }
         }
@@ -211,7 +213,8 @@ sub find_potential_TIS_in_stop_2_stop_region_fwd{
           
             if ($upstream_of_TIS) { $count+=3; }
 
-           if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){ push (@potential_TIS, $stop_codon); }
+#            if ($seq=~/ATG/ || $seq=~/GTG/ || $seq=~/TTG/ ){ push (@potential_TIS, $stop_codon); }
+            if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){ push(@potential_TIS, $stop_codon); }
 #            if ($seq=~/ATG/){ push(@potential_TIS, $stop_codon); }
 
             if ($stop_codon == $start_codon) { $upstream_of_TIS=1; }
@@ -255,6 +258,7 @@ sub find_potential_TIS_in_stop_2_stop_region_rev{
             
             if ($upstream_of_TIS) { $count+=3; }
 
+#            if ($seq=~/ATG/ || $seq=~/GTG/ || $seq=~/TTG/ ){ push(@potential_TIS, $stop_codon); }
             if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/ ){ push(@potential_TIS, $stop_codon); }
 #            if ($seq=~/ATG/){ push(@potential_TIS, $stop_codon); }
 

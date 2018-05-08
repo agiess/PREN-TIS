@@ -29,7 +29,8 @@ OPTIONS:
     -p  <number between 0 and 1>   the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
     -d  No argument                flag to disable glm feature selection
-    -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
+    -s  <seed>                     set a seed for repoducibility (defaults to random)
+'   -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
     -i  <number>                   minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
     -a  <number>                   maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)
     -h  No argument                this help message
@@ -39,7 +40,7 @@ example usage: bash pren_tis.sh -b <riboseq.aligned.bam> -g <genome.gtf> -f <gen
 EOF
 }
 
-while getopts ":b:g:f:i:a:o:v:p:edt:h" opt; do
+while getopts ":b:g:f:i:a:o:v:p:s:edt:h" opt; do
     case $opt in
         b)
             input_bam=$OPTARG
@@ -79,6 +80,9 @@ while getopts ":b:g:f:i:a:o:v:p:edt:h" opt; do
             ;;
         p)  
             proportion_of_high_genes=$OPTARG
+            ;;
+        s)
+            seed=$OPTARG
             ;;
         t)  
             threads=$OPTARG
@@ -120,6 +124,13 @@ if [ ! -d $out_dir ]; then
     echo "ERROR: could not find the directory: $out_dir"
     exit 1
 fi
+
+#set default seed
+if [ ! $seed ]; then
+   seed=$RANDOM;
+fi
+
+echo "-s seed set to $seed"
 
 #set default number of threads
 if [ ! $threads ]; then
@@ -191,7 +202,7 @@ fi
 
 if [ $validation_bed ]; then
 
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $validation_bed
+    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $seed $validation_bed
 
     if [ $? != 0 ] ; then
         echo "An error ocured in selection of the positive and negative sets"
@@ -200,7 +211,7 @@ if [ $validation_bed ]; then
 
 else
 
-    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes
+    perl scripts/02_positive_negative_sets.pl ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv $proportion_of_high_genes $seed
 
 fi
 
@@ -214,7 +225,7 @@ fi
  
 if [ $no_glm ]; then
 
-    Rscript scripts/03_run_model.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads
+    Rscript scripts/03_run_model.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads $seed
 
     #process RF variable importance
     perl scripts/03_variable_importance_matrix_RF.pl ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv
@@ -224,8 +235,7 @@ if [ $no_glm ]; then
 
 else
 
-    Rscript scripts/03_run_model_glm.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads
-
+    Rscript scripts/03_run_model_glm.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads $seed
     #process GLM coefficients
     perl scripts/03_variable_importance_matrix_GLM.pl ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv
 
