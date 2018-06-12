@@ -28,7 +28,7 @@ OPTIONS:
     -v  <file.bed>                 validated open reading frames in bed format
     -p  <number between 0 and 1>   the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
-    -d  No argument                flag to disable glm feature selection
+    -d  No argument                flag to enable glm feature selection
     -s  <seed>                     set a seed for repoducibility (defaults to random)
 '   -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
     -i  <number>                   minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
@@ -75,8 +75,8 @@ while getopts ":b:g:f:i:a:o:v:p:s:edt:h" opt; do
             echo "-e eukaryotic flag set"
             ;;
         d)
-            no_glm=1
-            echo "-d glm feature selection disabled"
+            use_glm=1
+            echo "-d glm feature selection enabled"
             ;;
         p)  
             proportion_of_high_genes=$OPTARG
@@ -223,7 +223,20 @@ if [ ! -d ${out_dir}/model_metrics ]; then
     mkdir ${out_dir}/model_metrics
 fi
  
-if [ $no_glm ]; then
+if [ $use_glm ]; then
+
+    Rscript scripts/03_run_model_glm.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads $seed
+
+    #process GLM coefficients
+    perl scripts/03_variable_importance_matrix_GLM.pl ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv
+
+    #process RF variable importance
+    perl scripts/03_variable_importance_matrix_RF.pl ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv
+
+    #plot variable importance heatmaps
+    Rscript scripts/03_plot_variables_glm.R ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv ${out_dir}/model_metrics/${prefix}_variable_importance_heatmaps.pdf
+
+else
 
     Rscript scripts/03_run_model.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads $seed
 
@@ -232,18 +245,6 @@ if [ $no_glm ]; then
 
     #plot variable importance heatmaps
     Rscript scripts/03_plot_variables.R ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv ${out_dir}/model_metrics/${prefix}_variable_importance_heatmaps.pdf
-
-else
-
-    Rscript scripts/03_run_model_glm.R ${out_dir}/${prefix}_positive_training.csv ${out_dir}/${prefix}_negative_training.csv ${out_dir}/${prefix}_positive_testing.csv ${out_dir}/${prefix}_negative_testing.csv ${out_dir}/${prefix}_stop2stop.csv ${out_dir}/model_metrics/${prefix}_training_glm_summary.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_summary.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_thresholds_and_metric_scores.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_confusion_matrix.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_summary.csv ${out_dir}/model_metrics/${prefix}_test_randomforest_performance_roc_plot.pdf ${out_dir}/${prefix}_stop2stop_predictions.csv $threads $seed
-    #process GLM coefficients
-    perl scripts/03_variable_importance_matrix_GLM.pl ${out_dir}/model_metrics/${prefix}_training_glm_coefficients.csv ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv
-
-    #process RF variable importance
-    perl scripts/03_variable_importance_matrix_RF.pl ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv 
-
-    #plot variable importance heatmaps
-    Rscript scripts/03_plot_variables_glm.R ${out_dir}/model_metrics/${prefix}_training_glm_coefficients_matrix.csv ${out_dir}/model_metrics/${prefix}_training_randomforest_variable_importance_matrix.csv ${out_dir}/model_metrics/${prefix}_variable_importance_heatmaps.pdf
 
 fi
 

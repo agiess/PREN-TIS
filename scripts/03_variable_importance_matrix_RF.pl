@@ -37,9 +37,13 @@ while (<IN>){
         my $scaled_coefficient=$line[3];
 
         #strip quotes
-        $name =~ tr/"/'/d;   
-        $coefficient =~ tr/"/'/d;
-        $scaled_coefficient =~ tr/"/'/d; 
+        $name =~ s/\"//g;
+        $coefficient =~ s/\"//g;
+        $scaled_coefficient =~ s/\"//g;
+       
+#        $name =~ tr/"/'/d;   
+#        $coefficient =~ tr/"/'/d;
+#        $scaled_coefficient =~ tr/"/'/d; 
 
         #names
         if ($name =~ /distance_to_region_start/ ){ $upstream_TIS=$scaled_coefficient; }

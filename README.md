@@ -29,7 +29,7 @@ OPTIONS:
     -o  output directory
     -v  validated open reading frames in bed format (optional)
     -e  flag for eukaryotic samples (defaults to prokaryotic)
-    -d  flag to disable glm feature selection (defaults to use feature selection)
+    -d  flag to enable glm feature selection (by default no feature selection is used)
     -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -s  set a seed for reproducible set selection and model training (defaults to random)
     -t  number of threads for model training/prediction (defaults to 1 thread)
@@ -54,9 +54,9 @@ The algorithm carries out the following steps:
 3) Select positive and negative examples for model training.
 
 4) Define training and testing sets.
-   Select features with a glm, using the training set. Alpha and lambda values are tuned with 10 fold cross validation.
-   Train a randomforest model using the training set and the selected features. The number of trees is tuned with 10 fold cross validation. 
-   Report the randomforest model metrics on the testing set. 
+   (Optionally) Select features with a glm. Alpha and lambda values are tuned with 10 fold cross validation).
+   Train a randomforest model using the training set. The number of trees is tuned with 10 fold cross validation. 
+   Report the randomforest model metrics on the testing set.
    Score all potential TISs with the randomforest model.
 
 5) Select the most likely predicted TIS for each annotated gene.
@@ -71,8 +71,6 @@ The algorithm carries out the following steps:
 prefix_ORF_predictions.bed
 
 model_metrics:
-    prefix_training_glm_summary.csv 
-    prefix_training_glm_coefficients.csv 
     prefix_training_randomforest_summary.csv 
     prefix_training_randomforest_variable_importance.csv 
     prefix_test_randomforest_performance_thresholds_and_metric_scores.csv 
@@ -80,6 +78,8 @@ model_metrics:
     prefix_test_randomforest_performance_summary.csv 
     prefix_test_randomforest_performance_roc_plot.pdf 
     prefix_variable_importance_heatmaps.pdf
+    prefix_training_glm_summary.csv (optional)
+    prefix_training_glm_coefficients.csv (optional)
 
 validation_metrics:
     prefix_performance_on_validated_TIS.txt
