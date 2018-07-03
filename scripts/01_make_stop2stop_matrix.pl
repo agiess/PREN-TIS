@@ -19,7 +19,7 @@ my $out_file=$ARGV[3];
 my $min_length=$ARGV[4];
 my $max_length=$ARGV[5];
 
-my $WINDOW_START=20; #20 nt upstream
+my $WINDOW_START=30; #20 nt upstream
 my $WINDOW_END=20;   #20 nt downstream
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#

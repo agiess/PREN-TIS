@@ -2,17 +2,19 @@
 use strict;
 
 #to do 05/12/2017
-#script to take a bed file of orf predictions and to report n-termini suppoprt per prediction catagory
-#looking for exact matches only
+#script to produce ORF bed tracks from randomForest predictions reporting the predicted TIS with the highest score for the longest transcript of each gene
 
+#input files:
 my $gtf=$ARGV[0];
-my $fasta=$ARGV[1]; 
-my $nterm=$ARGV[2]; #bed of N-termini predictions
-my $pred=$ARGV[3];   #of predictions
+my $fasta=$ARGV[1];
+my $out_bed=$ARGV[2];
+my $matrix_file=$ARGV[3];
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #open gtf and get transcript lengths
 my %transcripts; #key = gene_id, transcript_id, #value = sum_exon_lengths;
+
+my %all_annotated_start_sites; #for checking if predictions are novel TIS or isoform varients
 
 open(GENES1,$gtf) || die "can't open $gtf";      #gft is 1 based
 while (<GENES1>){
@@ -37,6 +39,13 @@ while (<GENES1>){
                     for ($start .. $end){
                         $transcripts{$gene_id}{$transcript_id}++;
                     }
+                }
+            }
+            if ($class eq "start_codon"){
+                if ($dir eq "+"){ #fwd cases. Use start positions as 5'
+                    $all_annotated_start_sites{$start}=1;
+                }else{
+                    $all_annotated_start_sites{$end}=1;
                 }
             }
         }
@@ -124,7 +133,7 @@ while (<GENES2>){
                                 }
                             }else{
                                 $gene_start_codon_rev{$gene_id}=$end;
-                            }
+                            }                       
                         }
                         if ($class eq "stop_codon"){
                             if (exists ($gene_stop_codon_rev{$gene_id})){ #if multiple stop codon line take the higher
@@ -146,9 +155,8 @@ while (<GENES2>){
 }
 close(GENES2);
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#Open fasta for codon sequeces
-
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+##open fasta for codon sequeces
 my %fasta_sequences; #key = sequence_name, value=sequence
 my $name;
 open (FA, $fasta) || die "can't open $fasta";
@@ -203,6 +211,7 @@ for my $gene (keys %gene_exons_fwd){
     }
 }
 
+
 my %gene_model_rev;
 
 for my $gene (keys %gene_exons_rev){
@@ -244,8 +253,8 @@ for my $gene (keys %stop2stop_start_coord_fwd){
     while ($search){
 
         if (exists ($gene_model_fwd{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
-
-            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord-0)} -1), 1); #Fasta sequence is zero based
+ 
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord-0)} -1), 1);     #remember the fasta sequence is zero based
             my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+1)} -1), 1);
             my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($coord+2)} -1), 1);
             my $seq=$codon1.$codon2.$codon3;
@@ -274,7 +283,7 @@ for my $gene (keys %stop2stop_start_coord_rev){
 
         if (exists ($gene_model_rev{$gene}{$coord})){ #search upstream while we are within an annotated leader region.
 
-            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord-0) } -1) ,1); #Fasta sequence is zero based
+            my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord-0) } -1) ,1); #remember the fasta sequence is zero based
             my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+1) } -1) ,1);
             my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($coord+2) } -1) ,1);
             my $seq=$codon1.$codon2.$codon3;
@@ -293,242 +302,231 @@ for my $gene (keys %stop2stop_start_coord_rev){
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#open n-termini bed
-my %n_term_fwd; #key=chr, key=start_position, value=count
-my %n_term_rev;
+my %gene_score;  #gene = score
+my %gene_keeper; #gene = matrix row
+#get highest position for each gene
 
-open (PEP, $nterm) || die "can't open $nterm";      #bed is O based at start, 1 based at end
-while (<PEP>){
-    unless (/^track/){  #skip header
-        my @b=split("\t");
-        my $chr=$b[0];
-        my $start=$b[1]+1;     #start is zero bases
-        my $stop=$b[2];
-        my $count=$b[4];
-        my $dir=$b[5];
+open (MAT, $matrix_file) || die "can't open $matrix_file";      #bed is O based at start, 1 based at end
+while (<MAT>){
 
-        #assign to metaplots 
-        if ($dir eq "+"){                                      #fwd cases
-            #five_prime=$start;
-            $n_term_fwd{$chr}{$stop-2}=$start; #1st nt in codon
-        }else{                                                 #reverse cases
-            #five_prime=$stop;
-            $n_term_rev{$chr}{$start+2}=$stop; #1st nt in codon
-        }
-    }
-}
-close (PEP);
+    my $row=$_;
+    chomp($row);
 
-#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-#assign N-termini to genes
-my $total_TIS_count_in_supported_genes=0;
-my $supported_ORF_count=0;
-my $supported_matching=0;
-my $supported_truncation=0;
-my $supported_elongation=0;
-my %N_terminal_assingment_fwd; #key1 = chr, key2= stop, value = ["Annotated", "Truncated", "Extended"]
-my %N_terminal_assingment_rev; #key1 = chr, key2= stop, value = ["Annotated", "Truncated", "Extended"]
+    unless (/^\"\"/){ #skip header
+        my @l=split(",",$row);
+        my $codon=$l[1];
+        my $dir=$l[2];
+        my $reads_at_pos=$l[8];
+        my $reads_down=$l[9];   
+        my $reads_up=$l[10];     
+        my $prediction=$l[-2]; #second to last column
+        my $pos_prob=$l[-1]; #last column
+        $pos_prob =~ tr/"//d;
 
+        my ($CHR, $POS, $DIR, $GENE)= $l[0] =~ /^\"(.*)_(\d+)_(fwd|rev)_([^\"]+)\"$/;
 
-for my $gene (keys %gene_model_fwd){
-    my $stop_codon_coord = $stop2stop_stop_coord_fwd{$gene};
-    my $start_codon_coord = $stop2stop_start_coord_fwd{$gene};  
-    my $stop_codon_pos = $gene_model_fwd{$gene}{ $stop_codon_coord };  
-	my $chr=$gene_2_chr{$gene};  
-
-    if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
-
-        if (exists ($n_term_fwd{$chr}{$stop_codon_pos})){  #if they share a stop codon
-            $supported_ORF_count++;
-   
-            my $start_codon_pos = $gene_model_fwd{$gene}{ $start_codon_coord };
-            my $nterm_start = $n_term_fwd{$chr}{$stop_codon_pos};
-
-            if ($nterm_start == $start_codon_pos){
-                $supported_matching++;
-                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Annotated";
-            }elsif( $nterm_start < $start_codon_pos ){
-                $supported_truncation++;
-                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Truncated";
-            }else{
-                $supported_elongation++;
-                $N_terminal_assingment_fwd{$chr}{$stop_codon_pos}="Extended";
-            }
+        if ($prediction eq "\"pos\""){
  
-            #Count potential TIS's here
-            my $search_coord=$start_of_stop2stop_fwd{$gene};
-
-            while ($search_coord < $stop_codon_coord){ #start of stop2stop region to stop codon
- 
-                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord-0)} -1), 1);     #remember the fasta sequence is zero based
-                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord+1)} -1), 1);
-                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_fwd{$gene}{ ($search_coord+2)} -1), 1);
-                my $seq=$codon1.$codon2.$codon3;
-
-                if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
-                    $total_TIS_count_in_supported_genes++;
+            if (exists $gene_score{$GENE}){
+                if ($pos_prob > $gene_score{$GENE}){ #new winner         
+                    $gene_score{$GENE}=$pos_prob;
+                    $gene_keeper{$GENE}=$_;
                 }
-                $search_coord+=3;
-            }
-        }
-    }
-}
-
-for my $gene (keys %gene_model_rev){
-    my $stop_codon_coord = $stop2stop_stop_coord_rev{$gene};
-    my $start_codon_coord = $stop2stop_start_coord_rev{$gene};
-    my $stop_codon_pos = $gene_model_rev{$gene}{ $stop_codon_coord };
-    my $chr=$gene_2_chr{$gene};
-
-    if ($start_codon_coord > 20){ #restrict to genes with at least 21nt of 5' leader, upstream of the start codon (for calculating features in the -20 nt window
-
-        if (exists ($n_term_rev{$chr}{$stop_codon_pos})){  #if they share a stop codon
-            $supported_ORF_count++;
-
-            my $start_codon_pos = $gene_model_rev{$gene}{ $start_codon_coord };
-            my $nterm_start = $n_term_rev{$chr}{$stop_codon_pos};
-
-            if ($nterm_start == $start_codon_pos){
-                $supported_matching++;
-                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Annotated";
-            }elsif( $nterm_start > $start_codon_pos ){
-                $supported_truncation++;
-                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Truncated";
-            }else{
-                $supported_elongation++;
-                $N_terminal_assingment_rev{$chr}{$stop_codon_pos}="Extended";
-            }
-
-            #I can also count poitential TIS's here
-            my $search_coord=$start_of_stop2stop_rev{$gene};
-            while ($search_coord < $stop_codon_coord){ #start of stop2stop region to stop codon
-
-                my $codon1=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord-0)} -1), 1);     #remember the fasta sequence is zero based
-                my $codon2=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord+1)} -1), 1);
-                my $codon3=substr($fasta_sequences{$chr}, ($gene_model_rev{$gene}{ ($search_coord+2)} -1), 1);
-                my $seq=$codon1.$codon2.$codon3;
-                $seq=~tr/ACGTacgt/TGCAtgca/;
-
-                if ($seq=~/\wTG/ || $seq=~/A\wG/ || $seq=~/AT\w/){
-                    $total_TIS_count_in_supported_genes++;
-                }
-                $search_coord+=3;
+            }else{ #initalise
+                $gene_score{$GENE}=$pos_prob;
+                $gene_keeper{$GENE}=$_;
             }
         }
     }
 }
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
-my $true_positive=0;
-my $false_positive=0;
-my $total_predictions_in_supported_ORFs=0;
-my %n_terminally_supported_ORF_match;
+#output predicted regions in bed format, classify as tuncated, elongated or matching compared to anottated genes
+my $ano=0;
+my $tru=0;
+my $elo=0;
 
-my $positive_annotated=0;
-my $positive_truncated=0;
-my $positive_extended=0;
+my $isoform_match_tru=0;
+my $novel_match_tru=0;
+my $isoform_match_elo=0;
+my $novel_match_elo=0;
 
-open (PRED, $pred) || die "can't open $pred";      #bed is O based at start, 1 based at end
-while (<PRED>){
-    unless (/^track/){  #skip header
-        my @b=split("\t");
-        my $chr=$b[0];
-        my $start=$b[1]+1;     #start is zero based
-        my $stop=$b[2];
-        my $dir=$b[5];
+my %codon_usage_ano;
+my %codon_usage_elo;
+my %codon_usage_tru;
 
-        if ($dir eq "+"){
+open (OUT, ">$out_bed") || die "Can't open $out_bed";
 
-            #check if the region shares a stop codon with a peptide
-            if (exists ($N_terminal_assingment_fwd{$chr}{$stop-2} )){
+#header
+print OUT "track_name=annotated_TIS itemRgb=On\n";
 
-                $n_terminally_supported_ORF_match{$chr}{$stop-2}=1;
-                        
-                $total_predictions_in_supported_ORFs++;
+for my $gene (keys %gene_keeper){
 
-                #check if the start codon matches the start of the N-terminal peptide
-                if ($start == $n_term_fwd{$chr}{$stop-2}){
-                    $true_positive++;
-            
-                    if ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Annotated"){ $positive_annotated++; 
-                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Truncated"){ $positive_truncated++;
-                    }elsif ($N_terminal_assingment_fwd{$chr}{$stop-2} eq "Extended"){ $positive_extended++; }
+    my $line=$gene_keeper{$gene};
+    chomp($line);
+    my @l=split(",",$line);
+
+    my $codon=$l[1];
+    my $dir=$l[2];
+    my $reads_at_pos=$l[8];
+    my $reads_down=$l[9];    
+    my $reads_up=$l[10];      
+    my $prediction=$l[-2];
+    my $pos_prob=$l[-1];
+    $pos_prob =~ tr/"//d;
+
+    my ($CHR, $POS, $DIR, $GENE)= $l[0] =~ /^\"(.*)_(\d+)_(fwd|rev)_([^\"]+)\"$/;
+ 
+    #find the nearest in frame stop codon;             
+    if ($dir eq "\"fwd\""){ #forward cases
+ 
+        #go though transcript coords, until we find the stop codon
+        my $start_coord=$stop2stop_start_coord_fwd{$GENE};
+        my $stop_coord=$stop2stop_stop_coord_fwd{$GENE};
+        
+        my $model_pos=0;
+        my $search=1;
+        while ($search){
+
+            if ($model_pos >= $stop_coord){ #if the coord is higher than the stop codon coord
+                last;
+                $search=0;
+            }         
+
+            if ($gene_model_fwd{$GENE}{$model_pos} == $POS){ #the predeicted ORF starts here
+
+                my @TIS;
+                for(0 .. 2){
+                    if (exists ($gene_model_fwd{$GENE}{ ($model_pos+$_) } )){
+                        push (@TIS, substr($fasta_sequences{$CHR}, ($gene_model_fwd{$GENE}{ ($model_pos+$_) } -1), 1) );
+                    }else{
+                        push (@TIS, "N");
+                    }
+                }
+                my $seq_TIS=join("", @TIS);
+
+                if ($seq_TIS eq "ATT"){ print "ATT $CHR:$gene_model_fwd{$GENE}{$model_pos}\n";  }
+                if ($seq_TIS eq "GTG"){ print "GTG $CHR:$gene_model_fwd{$GENE}{$model_pos}\n";  }
+                if ($seq_TIS eq "CTG"){ print "CTG $CHR:$gene_model_fwd{$GENE}{$model_pos}\n";  }
+
+                if ($model_pos == $start_coord){
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tAnnotated\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t$length_change\n";
+                    $ano++;                   
+                    $codon_usage_ano{$seq_TIS}++;                   
+
+                }
+                elsif($model_pos > $start_coord){
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tTruncation\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t$length_change\n";
+                    $tru++;
+                    $codon_usage_tru{$seq_TIS}++;
+
+                    if (exists( $all_annotated_start_sites{ $gene_model_fwd{$GENE}{$model_pos} } )){
+                        $isoform_match_tru++;
+                    }else{
+                        $novel_match_tru++;
+                    }
 
                 }else{
-                    $false_positive++;
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\tExtension\t$pos_prob\t+\t".($gene_model_fwd{$GENE}{$model_pos}-1)."\t".($gene_model_fwd{$GENE}{$stop_coord}+2)."\t$length_change\n";
+                    $elo++;      
+                    $codon_usage_elo{$seq_TIS}++;
+
+                    if ( exists($all_annotated_start_sites{ $gene_model_fwd{$GENE}{$model_pos} })){
+                        $isoform_match_elo++;
+                    }else{
+                        $novel_match_elo++;
+                    }
+
                 }
+                $search=0;
+            } 
+            $model_pos++;
+        }
+
+    }else{ #reverse cases
+
+        my $start_coord=$stop2stop_start_coord_rev{$GENE};
+        my $stop_coord=$stop2stop_stop_coord_rev{$GENE};
+
+        my $model_pos=0;
+        my $search=1;
+        while ($search){
+
+            if ($model_pos >= $stop_coord){ #if the coord is higher than the stop codon coord
+                $search=0;
             }
-        }else{ #reverse cases
 
-            #check if the prediction shared a stop codon with a N-termnially supported ORF
-            if (exists ( $n_term_rev{$chr}{$start+2} )){
+            if ($gene_model_rev{$GENE}{$model_pos} == $POS){ #the predicted ORF starts here
 
-                $n_terminally_supported_ORF_match{$chr}{$start+2}=1;
+                my @TIS;
+                for(0 .. 2){
+                    if (exists ($gene_model_rev{$GENE}{ ($model_pos+$_) } )){
+                        push (@TIS, substr($fasta_sequences{$CHR}, ($gene_model_rev{$GENE}{ ($model_pos+$_) } -1), 1) );
+                    }else{
+                        push (@TIS, "N");
+                    }
+                }
+                my $seq_TIS=join("", @TIS);
+                $seq_TIS=~tr/ACGTacgt/TGCAtgca/;
 
-                $total_predictions_in_supported_ORFs++;
+               if ($seq_TIS eq "ATT"){ print "ATT $CHR:$gene_model_rev{$GENE}{$model_pos}\n";  }
+               if ($seq_TIS eq "GTG"){ print "GTG $CHR:$gene_model_rev{$GENE}{$model_pos}\n";  }
+               if ($seq_TIS eq "CTG"){ print "CTG $CHR:$gene_model_rev{$GENE}{$model_pos}\n";  }
 
-                #check if the start codon matches the start of the N-terminal peptide
-                if ($stop == $n_term_rev{$chr}{$start+2}){
-                    $true_positive++;
+                if ($model_pos == $start_coord){
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tAnnotated\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t$length_change\n";
+                    $ano++;
+                    $codon_usage_ano{$seq_TIS}++;
 
-                    if ($N_terminal_assingment_rev{$chr}{$start+2} eq "Annotated"){ $positive_annotated++;
-                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Truncated"){ $positive_truncated++;
-                    }elsif ($N_terminal_assingment_rev{$chr}{$start+2} eq "Extended"){ $positive_extended++; }
+                }elsif($model_pos > $start_coord){
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tTruncation\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t$length_change\n";
+                    $tru++;
+                    $codon_usage_tru{$seq_TIS}++;
+
+                    if ( exists($all_annotated_start_sites{ $gene_model_rev{$GENE}{$model_pos} })){
+                        $isoform_match_tru++;
+                    }else{
+                        $novel_match_tru++;
+                    }
 
                 }else{
-                    $false_positive++;
+                    my $length_change=$start_coord-$model_pos;
+                    print OUT "$CHR\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\tExtension\t$pos_prob\t-\t".($gene_model_rev{$GENE}{$stop_coord}-3)."\t$gene_model_rev{$GENE}{$model_pos}\t$length_change\n";
+                    $elo++;
+                    $codon_usage_elo{$seq_TIS}++;
+
+                    if ( exists($all_annotated_start_sites{ $gene_model_rev{$GENE}{$model_pos} })){
+                        $isoform_match_elo++;
+                    }else{
+                        $novel_match_elo++;
+                    }
                 }
+                $search=0;
             }
+            $model_pos++;
         }
     }
 }
 
-close (PRED);
-            
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+print "Counts:\n$ano\t#1 Predictions matching annotated start codons\n$tru\t#2 Predicted truncations\n$elo\t#3 Predicted extensions\n";
 
-my $ORFs_found_count=0;
+print "Of the truncations, $isoform_match_tru matched annotaed TIS, $novel_match_tru were novel TIS\n";
+print "Of the elongations, $isoform_match_elo matched annotaed TIS, $novel_match_elo were novel TIS\n";
 
-for my $chr (keys %n_terminally_supported_ORF_match){
-    for (keys %{ $n_terminally_supported_ORF_match{$chr} }) {
-        $ORFs_found_count++;
-    }
+for (keys %codon_usage_ano){
+    print "ano,$_,$codon_usage_ano{$_}\n";
 }
-
-#TRUE_POSITIVE  = The number of predicted ORFs that agree with N-terminal peptides
-#FALSE_POSITIVE = The number of predicted ORFs that disagree with N-terminal peptide
-#TRUE_NEGATIVE  = The number of potential start sites in ORFs with N-terminal support, that were neither predicted nor supported
-#FALSE_NEGATIVE = The number of ORFs with N-terminal support that were not predicted
-
-my $false_negative=$supported_ORF_count-$ORFs_found_count;
-my $true_negative=$total_TIS_count_in_supported_genes-$supported_ORF_count-$false_positive;
-
-print "TOTAL_PREDICTIONS\t$total_predictions_in_supported_ORFs\n";
-print "TOTAL_SUPPORTED_ORFS\t$supported_ORF_count\n";
-print "\n";
-
-print "TRUE_POSITIVE\t$true_positive\n";
-print "FALSE_POSITIVE\t$false_positive\n";
-print "TRUE_NEGATIVE\t$true_negative\n";
-print "FALSE_NEGATIVE\t$false_negative\n";
-
-print "\nOf the true positives:\n";
-print "Supported_matching:\t$positive_annotated of $supported_matching sites predicted\n";
-print "Supported_truncation:\t$positive_truncated of $supported_truncation sites predicted\n";
-print "Supported_elongation:\t$positive_extended of $supported_elongation sites predicted\n";
-
-my $predicted_correct=$true_positive;
-my $predicted_incorrect=$false_positive;
-my $supported_not_found=$false_negative;
-my $correctly_rejected=$true_negative;
-
-my $sensitivity=eval{$predicted_correct/($predicted_correct+$supported_not_found)} || 0 ;
-my $specificity=eval{$correctly_rejected/($predicted_incorrect+$correctly_rejected)} || 0;
-my $precision=eval{$predicted_correct/($predicted_correct+$predicted_incorrect)} || 0;;
-
-print "\n";
-print "sensitivity\t$sensitivity\n";
-print "specificity\t$specificity\n";
-print "positive_predictive_value\t$precision\n";
+for (keys %codon_usage_tru){
+    print "tru,$_,$codon_usage_tru{$_}\n";
+}
+for (keys %codon_usage_elo){
+    print "elo,$_,$codon_usage_elo{$_}\n";
+}
 
 exit;

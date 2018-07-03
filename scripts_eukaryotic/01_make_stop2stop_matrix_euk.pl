@@ -110,10 +110,22 @@ while (<GENES2>){
                     if ($dir eq "+"){ #fwd cases. Use start positions as 5'
 
                         if ($class eq "start_codon"){ 
-                            $gene_start_codon_fwd{$gene_id}=$start;
+                            if (exists ($gene_start_codon_fwd{$gene_id})){ #if multiple start codon line take the lower
+                                if ($start < $gene_start_codon_fwd{$gene_id}){
+                                     $gene_start_codon_fwd{$gene_id}=$start;
+                                }
+                            }else{
+                                $gene_start_codon_fwd{$gene_id}=$start;
+                            }
                         }
                         if ($class eq "stop_codon"){ 
-                            $gene_stop_codon_fwd{$gene_id}=$start;
+                            if (exists ($gene_stop_codon_fwd{$gene_id})){ #if multiple stop codon line take the lower
+                                if ($start < $gene_stop_codon_fwd{$gene_id}){
+                                     $gene_stop_codon_fwd{$gene_id}=$start;
+                                }
+                            }else{
+                                $gene_stop_codon_fwd{$gene_id}=$start;
+                            }
                         }
                         if ($class eq "exon"){
                             $gene_exons_fwd{$gene_id}{$start}=$end; 
@@ -122,10 +134,22 @@ while (<GENES2>){
                     }else{ #revese cases use end as 5'
   
                         if ($class eq "start_codon"){
-                            $gene_start_codon_rev{$gene_id}=$end;
+                            if (exists ($gene_start_codon_rev{$gene_id})){ #if multiple start codon line take the higher
+                                if ($end > $gene_start_codon_rev{$gene_id}){
+                                     $gene_start_codon_rev{$gene_id}=$end;
+                                }
+                            }else{
+                                $gene_start_codon_rev{$gene_id}=$end;
+                            }
                         }
                         if ($class eq "stop_codon"){
-                            $gene_stop_codon_rev{$gene_id}=$end;
+                            if (exists ($gene_stop_codon_rev{$gene_id})){ #if multiple stop codon line take the higher
+                                if ($end > $gene_stop_codon_rev{$gene_id}){
+                                     $gene_stop_codon_rev{$gene_id}=$end;
+                                }
+                            }else{
+                                $gene_stop_codon_rev{$gene_id}=$end;
+                            }
                         }
                         if ($class eq "exon"){
                             $gene_exons_rev{$gene_id}{$start}=$end;
