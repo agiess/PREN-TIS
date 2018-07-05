@@ -245,12 +245,14 @@ my $correctly_rejected=$true_negative;
 
 my $sensitivity=eval{$predicted_correct/($predicted_correct+$supported_not_found)} || 0 ;
 my $specificity=eval{$correctly_rejected/($predicted_incorrect+$correctly_rejected)} || 0;
-my $precision=eval{$predicted_correct/($predicted_correct+$predicted_incorrect)} || 0;;
+my $precision=eval{$predicted_correct/($predicted_correct+$predicted_incorrect)} || 0;
+my $mcc=eval{ ( ($predicted_correct * $correctly_rejected) - ($predicted_incorrect * $supported_not_found) ) / (sqrt ( ($predicted_correct + $predicted_incorrect) * ($predicted_correct + $supported_not_found) * ($correctly_rejected + $predicted_incorrect) * ($correctly_rejected + $supported_not_found) ) ) } || 0;
 
 print "\n";
 print "sensitivity\t$sensitivity\n";
 print "specificity\t$specificity\n";
 print "positive_predictive_value\t$precision\n";
+print "matthews_correlation_coefficient\t$mcc\n";
 
 exit;
 
