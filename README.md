@@ -30,6 +30,7 @@ OPTIONS:
     -v  validated open reading frames in bed format (optional)
     -e  flag for eukaryotic samples (defaults to prokaryotic)
     -d  flag to enable glm feature selection (by default no feature selection is used)
+    -m  plot heatmaps and readdistributions around start codons (defaults to false)
     -p  the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -s  set a seed for reproducible set selection and model training (defaults to random)
     -t  number of threads for model training/prediction (defaults to 1 thread)
@@ -63,7 +64,9 @@ The algorithm carries out the following steps:
 
 6) (optional) Access the predicted TIS against validated TIS from independent methods, such as N-terminal proteomics.
 
-7) Remove temporary files.
+7) (optional) Plot ribo-seq read distirbutions and heatmaps around start codons (defaults to false)
+ 
+8) Remove temporary files.
 
 ## Output files
 
@@ -83,6 +86,10 @@ model_metrics:
 
 validation_metrics:
     prefix_performance_on_validated_TIS.txt
+
+heatmaps (optional)
+   prefix_heatmaps.pdf 
+    
 ```
 
 ## Notes

@@ -280,7 +280,7 @@ for my $gene (keys %gene_exons_fwd){
 
                     if ($_ == $extended_gene_start_pos_fwd{$gene}){
                         $extended_gene_start_coord_fwd{$gene}=$model_pos;
-#                       print "$gene,fwd,extended,$_,$model_pos\n";
+                       print "$gene,fwd,extended,$_,$model_pos\n";
                     }
                     $model_pos++;
                 }
@@ -299,7 +299,7 @@ for my $gene (keys %gene_exons_rev){
 
                     if ($exon_start == $extended_gene_start_pos_rev{$gene}){
                         $extended_gene_start_coord_rev{$gene}=$model_pos;    #find the index of the start codon per gene
-#                       print "$gene,rev,extended,$exon_start,$model_pos\n";
+                        print "$gene,rev,extended,$exon_start,$model_pos\n";
                     }
                     $model_pos++;
                     $exon_start--;
@@ -308,6 +308,8 @@ for my $gene (keys %gene_exons_rev){
         }
     }
 }
+
+exit;
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 
@@ -330,8 +332,16 @@ for my $gene (keys %gene_model_fwd){
             }
         }
     }
+    
     my $nuc_CDS=join("", @CDS);
-    my $pro_CDS=&translate($nuc_CDS);
+
+    my $pro_CDS;
+    if ($gene =~ /^Q/){   #mitocondrial genes ie.Q0105
+        $pro_CDS=&translate_mito($nuc_CDS);
+        #print "mito_fwd:$pro_CDS\n";
+    }else{
+        $pro_CDS=&translate($nuc_CDS);
+    }
     print ">$gene\n$pro_CDS\n";
 }
 
@@ -357,7 +367,14 @@ for my $gene (keys %gene_model_rev){
     }
     my $nuc_CDS=join("", @CDS);
     $nuc_CDS=~tr/ACGTacgt/TGCAtgca/;
-    my $pro_CDS=&translate($nuc_CDS);
+
+    my $pro_CDS;
+    if ($gene =~ /^Q/){   #mitocondrial genes ie.Q0105
+        $pro_CDS=&translate_mito($nuc_CDS);
+        #print "mito_rev,$pro_CDS\n";
+    }else{
+        $pro_CDS=&translate($nuc_CDS);
+    }
     print ">$gene\n$pro_CDS\n";
 }
 
@@ -452,4 +469,95 @@ sub translate{
     return $amino_acids;
 }
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
+sub translate_mito{
+    #translate the nuncleotides of yeast mitocondrial CDSs into their corrosponding amino acid sequence
+
+    my $nucleotice_sequence=$_[0];
+
+    my(%genetic_code) = (
+      'TCA' => 'S',    # Serine
+      'TCC' => 'S',    # Serine
+      'TCG' => 'S',    # Serine
+      'TCT' => 'S',    # Serine
+      'TTC' => 'F',    # Phenylalanine
+      'TTT' => 'F',    # Phenylalanine
+      'TTA' => 'L',    # Leucine
+      'TTG' => 'L',    # Leucine
+      'TAC' => 'Y',    # Tyrosine
+      'TAT' => 'Y',    # Tyrosine
+      'TAA' => '_',    # Stop
+      'TAG' => '_',    # Stop
+      'TGC' => 'C',    # Cysteine
+      'TGT' => 'C',    # Cysteine
+      'TGA' => 'W',    # Trp (mito)
+      'TGG' => 'W',    # Tryptophan
+      'CTA' => 'T',    # Thr (mito)
+      'CTC' => 'T',    # Thr (mito)
+      'CTG' => 'T',    # Thr (mito)
+      'CTT' => 'T',    # Thr (mito)
+      'CCA' => 'P',    # Proline
+      'CCC' => 'P',    # Proline
+      'CCG' => 'P',    # Proline
+      'CCT' => 'P',    # Proline
+      'CAC' => 'H',    # Histidine
+      'CAT' => 'H',    # Histidine
+      'CAA' => 'Q',    # Glutamine
+      'CAG' => 'Q',    # Glutamine
+      'CGA' => 'R',    # Arginine  (absent from mito)
+      'CGC' => 'R',    # Arginine  (absent from mito)
+      'CGG' => 'R',    # Arginine
+      'CGT' => 'R',    # Arginine
+      'ATA' => 'M',    # Met (mito)
+      'ATC' => 'I',    # Isoleucine
+      'ATT' => 'I',    # Isoleucine
+      'ATG' => 'M',    # Methionine
+      'ACA' => 'T',    # Threonine
+      'ACC' => 'T',    # Threonine
+      'ACG' => 'T',    # Threonine
+      'ACT' => 'T',    # Threonine
+      'AAC' => 'N',    # Asparagine
+      'AAT' => 'N',    # Asparagine
+      'AAA' => 'K',    # Lysine
+      'AAG' => 'K',    # Lysine
+      'AGC' => 'S',    # Serine
+      'AGT' => 'S',    # Serine
+      'AGA' => 'R',    # Arginine
+      'AGG' => 'R',    # Arginine
+      'GTA' => 'V',    # Valine
+      'GTC' => 'V',    # Valine
+      'GTG' => 'V',    # Valine
+      'GTT' => 'V',    # Valine
+      'GCA' => 'A',    # Alanine
+      'GCC' => 'A',    # Alanine
+      'GCG' => 'A',    # Alanine
+      'GCT' => 'A',    # Alanine
+      'GAC' => 'D',    # Aspartic Acid
+      'GAT' => 'D',    # Aspartic Acid
+      'GAA' => 'E',    # Glutamic Acid
+      'GAG' => 'E',    # Glutamic Acid
+      'GGA' => 'G',    # Glycine
+      'GGC' => 'G',    # Glycine
+      'GGG' => 'G',    # Glycine
+      'GGT' => 'G',    # Glycine
+    );
+
+    my $amino_acids;
+    my @codons = $nucleotice_sequence =~ /(.{1,3})/g;
+
+    #my @codons;
+    #push @codons, substr $nucleotice_sequence, 0, 3, '' while $nucleotice_sequence;
+
+    for (@codons){
+        if(exists $genetic_code{$_}){
+            $amino_acids.=$genetic_code{$_};
+        }else{
+            print STDERR "Bad codon \"$_\"!!\n";
+        }
+    }
+    return $amino_acids;
+}
+
+
+
+
 

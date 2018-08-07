@@ -29,6 +29,7 @@ OPTIONS:
     -p  <number between 0 and 1>   the proportion of the 50% most highly expressed genes to use in the positive set (defaults to 1.0 for prokaryotic genomes and 0.1 for eukaryotic genomes)
     -e  No argument                flag for eukaryotic samples (defaults to prokaryotic)
     -d  No argument                flag to enable glm feature selection
+    -m  No argument                plot heatmaps around start codons (defaults to false)
     -s  <seed>                     set a seed for repoducibility (defaults to random)
 '   -t  <number>                   number of threads for model training/prediction (defaults to 1 thread)
     -i  <number>                   minimum ribo-seq read length (defaults to minimum length of mapped reads in bam file)
@@ -40,7 +41,7 @@ example usage: bash pren_tis.sh -b <riboseq.aligned.bam> -g <genome.gtf> -f <gen
 EOF
 }
 
-while getopts ":b:g:f:i:a:o:v:p:s:edt:h" opt; do
+while getopts ":b:g:f:i:a:o:v:p:s:edmt:h" opt; do
     case $opt in
         b)
             input_bam=$OPTARG
@@ -77,6 +78,10 @@ while getopts ":b:g:f:i:a:o:v:p:s:edt:h" opt; do
         d)
             use_glm=1
             echo "-d glm feature selection enabled"
+            ;;
+        m)  
+            plot_heatmaps=1;
+            echo "-m heatmap plotting enabled"
             ;;
         p)  
             proportion_of_high_genes=$OPTARG
@@ -285,7 +290,31 @@ if [ $validation_bed ]; then
 fi
 
 #------------------------------------------------------------------------------------------
-#7 Tidy up
+#7 Plot heatmaps and read distibutions around annotated start codons (optional)
+#------------------------------------------------------------------------------------------
+
+if [ $plot_heatmaps ]; then
+
+    if [ ! -d ${out_dir}/heatmaps ]; then
+        mkdir ${out_dir}/heatmaps
+    fi
+
+    if [ $eukaryotic ]; then
+
+        perl scripts_eukaryotic/06_heatmap_matrix_euk.pl $genome_gtf $input_bam ${out_dir}/heatmaps
+        Rscript scripts_eukaryotic/06_plot_heatmap_start_euk.R ${out_dir}/heatmaps/${prefix}_start_lengths_scale_5prime.csv ${out_dir}/heatmaps/${prefix}_start_lengths_scale_3prime.csv ${out_dir}/heatmaps/${prefix}_start_5prime_scale.csv ${out_dir}/heatmaps/${prefix}_start_3prime_scale.csv ${out_dir}/heatmaps/${prefix}_heatmaps.pdf
+
+   else
+
+       perl scripts/06_heatmap_matrix_prok.pl $genome_gtf $input_bam ${out_dir}/heatmaps
+       Rscript scripts/06_plot_heatmap_start_prok.R ${out_dir}/heatmaps/${prefix}_start_lengths_scale_5prime.csv ${out_dir}/heatmaps/${prefix}_start_lengths_scale_3prime.csv ${out_dir}/heatmaps/${prefix}_start_5prime_scale.csv ${out_dir}/heatmaps/${prefix}_start_3prime_scale.csv ${out_dir}/heatmaps/${prefix}_heatmaps.pdf
+
+   fi
+
+fi
+
+#------------------------------------------------------------------------------------------
+#8 Tidy up
 #------------------------------------------------------------------------------------------
 
 rm ${out_dir}/tmp/${prefix}.sam
