@@ -12,7 +12,7 @@ my $reads_position=0; #proportion_of_reads_at_positionm
 my $ORF_FPKM=0;       #ORF_fpkm
 
 my %length_matrix;
-for my $pos (-20 .. 20){
+for my $pos (-30 .. 20){
    for my $length (20 .. 49){
        $length_matrix{$pos}{$length}=0;
    }
@@ -20,7 +20,7 @@ for my $pos (-20 .. 20){
 
 my $best_codon=0;
 my %best_seq;
-for (-20 .. 20){
+for (-30 .. 20){
    $best_seq{$_}=0;
 }
 
