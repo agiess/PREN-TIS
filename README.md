@@ -99,4 +99,5 @@ When prokaryotic genomes are supplied the algorithm assumes that exon definition
 
 We suggest choosing a value for the proportion of the most highly expressed genes such that 1000-2000 annotated TIS are in the positive set.
 
-```
+This method builds on work published in: https://rdcu.be/brbpQ
+Giess, Adam, Veronique Jonckheere, Elvis Ndah, Katarzyna Chyżyńska, Petra Van Damme, and Eivind Valen. 2017. “Ribosome Signatures Aid Bacterial Translation Initiation Site Identification.” BMC Biology 15 (1): 76.```
