@@ -38,10 +38,12 @@ OPTIONS:
     -a  maximum ribo-seq read length (defaults to maximum length of mapped reads in bam file)
     -h  this help message
 ```
-### Example usage:
+
+## Example usage:
 
 ```
 bash pren_tis.sh -b <aligned.reads.bam> -o <output_directory> -g <genome.gtf> -f <genome.fasta>
+
 ```
 
 ## Algorithm
@@ -94,10 +96,13 @@ heatmaps (optional)
 
 ## Notes
 
-```
+
 When prokaryotic genomes are supplied the algorithm assumes that exon definitions in the gtf file contain stop codons.
 
 We suggest choosing a value for the proportion of the most highly expressed genes such that 1000-2000 annotated TIS are in the positive set.
 
-This method builds on work published in: [link to paper](https://rdcu.be/brbpQ)
+This method builds on work published in: 
+
 Giess, Adam, Veronique Jonckheere, Elvis Ndah, Katarzyna Chyżyńska, Petra Van Damme, and Eivind Valen. 2017. “Ribosome Signatures Aid Bacterial Translation Initiation Site Identification.” BMC Biology 15 (1): 76.
+
+[Giess et al., 2017](https://rdcu.be/brbpQ)
