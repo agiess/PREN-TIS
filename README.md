@@ -15,7 +15,9 @@ r package: h2o
 r package: dplyr
 r package: ggplot2
 r package: data.table
-```
+r package: gridExtra
+r package: scales
+
 
 ## Running the program 
 
