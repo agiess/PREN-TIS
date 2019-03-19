@@ -10,7 +10,7 @@ my_seed<-as.integer(args[16])
 
 #¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤#
 #start a h2o instance
-h2o.init(nthreads = n.threads, max_mem_size="100g")
+h2o.init(nthreads = n.threads)
 h2o.removeAll()
 
 
